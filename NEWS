@@ -1,4 +1,125 @@
 
+        CHANGES IN spatstat.core VERSION 2.0-0
+
+OVERVIEW
+
+    o We thank Tilman Davies,  Greg McSwiggan and Suman Rakshit
+    for contributions.
+    
+    o Diffusion kernel smoothing.
+    
+    o More support for spatial logistic regression models.
+
+NEW FUNCTIONS
+
+    o densityHeat, densityHeat.ppp
+    Given a point pattern, compute the diffusion kernel estimate
+    of point process intensity. This is an alternative to density.ppp.
+    
+SIGNIFICANT USER-VISIBLE CHANGES
+
+    o slrm
+    'step' can now be applied to models fitted using 'slrm'.
+
+
+        CHANGES IN spatstat.core VERSION 1.65-11
+
+OVERVIEW
+
+    o Internal tweaks.
+    
+        CHANGES IN spatstat.core VERSION 1.65-10
+
+OVERVIEW
+
+    o Minor corrections to documentation.
+
+        CHANGES IN spatstat.core VERSION 1.65-9
+
+OVERVIEW
+
+    o We thank Ian Buller for a suggestion.
+
+    o weights permitted in density calculation for line segments.
+
+SIGNIFICANT USER-VISIBLE CHANGES
+
+    o density.psp
+    New argument 'weights'.
+
+        CHANGES IN spatstat.core VERSION 1.65-8
+
+OVERVIEW
+
+    o Minor changes to appease the compiler.
+
+        CHANGES IN spatstat.core VERSION 1.65-7
+
+OVERVIEW
+
+    o We thank Michael Chirico for a contribution.
+
+    o Minor changes to appease the compiler.
+    
+        CHANGES IN spatstat.core VERSION 1.65-6
+
+OVERVIEW
+
+    o We thank Tilman Davies and Pavel Fibich for contributions.
+
+    o Important bug fix in simulation of log-Gaussian Cox processes.
+
+    o Increased speed for large datasets.
+
+    o variance calculations handle larger datasets.
+    
+SIGNIFICANT USER-VISIBLE CHANGES
+
+    o vcov.ppm, summary.ppm
+    Variance calculations now handle larger datasets
+    (using sparse arrays).
+    
+    o rSSI
+    Accelerated.
+    
+    o overall speed
+    Changes have been made to the internal code of spatstat 
+    which should accelerate computations involving large datasets.
+
+    o localpcf, localpcfinhom
+    New argument 'rvalue'.
+
+BUG FIXES
+
+    o rLGCP, simulate.kppm
+    Simulation results for log-Gaussian Cox processes were incorrect
+    unless the pixel dimensions and pixel spacings were identical
+    on the horizontal and vertical axes. (If pixel dimensions were not
+    specified, then the results were incorrect whenever the Frame of the
+    simulation window was not a square.) 
+    [Spotted by Tilman Davies.]
+    Fixed.
+    
+    o Vmark
+    Crashed if normalise=TRUE when there was only one column of marks.
+    (Spotted by Pavel Fibich.)
+    Fixed.
+    
+    o nnclean
+    Crashed if k >= npoints(X).
+    Fixed.
+
+    o print.ppm
+    Crashed sometimes when applied to the result of subfits().
+    Fixed.
+    
+    CHANGES IN spatstat.core VERSION 1.65-5
+
+OVERVIEW
+
+    o Minor changes required by CRAN.
+    
+
         CHANGES IN spatstat.core VERSION 1.65-1
 
 OVERVIEW
