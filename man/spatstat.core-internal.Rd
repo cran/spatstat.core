@@ -40,6 +40,7 @@
 \alias{coef.vblogit} 
 \alias{compatible.rat}
 \alias{compileCDF}
+\alias{condSimCox}
 \alias{conform.ratfv}
 \alias{CressieReadStatistic}
 \alias{CressieReadSymbol}
@@ -442,6 +443,8 @@ clarkevansCalc(X, correction, clipregion, working)
 \method{coef}{vblogit}(object, \dots) 
 \method{compatible}{rat}(A, B, \dots) 
 compileCDF(D, B, r, \dots, han.denom, check)
+condSimCox(object, nsim, \dots, window, n.cond, w.cond,
+           giveup, maxchunk, verbose, drop)
 conform.ratfv(x)
 CressieReadStatistic(OBS,EXP,lambda,normalise,named)
 CressieReadSymbol(lambda)
@@ -513,8 +516,8 @@ envelopeTest(X, \dots, exponent, alternative,
 equalpairs(U, X, marked=FALSE)
 evalCovar(model, covariate, \dots)
 \method{evalCovar}{ppm}(model, covariate, \dots, lambdatype,
-          dimyx, eps, interpolate, jitter, modelname, covname, dataname,
-          subset) 
+          dimyx, eps, interpolate, jitter, jitterfactor,
+          modelname, covname, dataname, subset) 
 evalCovariate(covariate, locations)
 evalInteraction(X,P,E,interaction,correction,splitInf,\dots,
                 precomputed,savecomputed)

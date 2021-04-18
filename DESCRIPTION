@@ -1,6 +1,6 @@
 Package: spatstat.core
-Version: 2.0-0
-Date: 2021-03-23
+Version: 2.1-2
+Date: 2021-04-17
 Title: Core Functionality of the 'spatstat' Family
 Authors@R: c(person("Adrian", "Baddeley", 
                     role = c("aut", "cre"),
@@ -12,6 +12,10 @@ Authors@R: c(person("Adrian", "Baddeley",
                     role = "aut",
 		    email = "rubak@math.aau.dk"),
 	     person("Kasper", "Klitgaard Berthelsen",
+	            role = "ctb"),
+	     person("Achmad", "Choiruddin",
+	            role = "ctb"),
+	     person("Jean-Francois", "Coeurjolly",
 	            role = "ctb"),
 	     person("Ottmar", "Cronie",
 	            role = "ctb"),
@@ -60,15 +64,16 @@ Description: Functionality for data analysis and modelling of
 	Fitted point process models can be simulated, automatically. Formal hypothesis tests of a fitted model are supported (likelihood ratio test, analysis of deviance, Monte Carlo tests) along with basic tools for model selection (stepwise(), AIC()) and variable selection (sdr). Tools for validating the fitted model include simulation envelopes, residuals, residual plots and Q-Q plots, leverage and influence diagnostics, partial residuals, and added variable plots.
 License: GPL (>= 2)
 URL: http://spatstat.org/
-LazyData: true
 NeedsCompilation: yes
 ByteCompile: true
 BugReports: https://github.com/spatstat/spatstat.core/issues
-Packaged: 2021-03-23 09:22:12 UTC; adrian
+Packaged: 2021-04-17 05:18:24 UTC; adrian
 Author: Adrian Baddeley [aut, cre],
   Rolf Turner [aut],
   Ege Rubak [aut],
   Kasper Klitgaard Berthelsen [ctb],
+  Achmad Choiruddin [ctb],
+  Jean-Francois Coeurjolly [ctb],
   Ottmar Cronie [ctb],
   Tilman Davies [ctb],
   Julian Gilbey [ctb],
@@ -84,4 +89,4 @@ Author: Adrian Baddeley [aut, cre],
   Rasmus Plenge Waagepetersen [ctb],
   Hangsheng Wang [ctb]
 Repository: CRAN
-Date/Publication: 2021-03-23 17:10:06 UTC
+Date/Publication: 2021-04-18 21:40:07 UTC
