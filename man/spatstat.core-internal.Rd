@@ -69,6 +69,7 @@
 \alias{dimnames.msr}
 \alias{distributecbind}
 \alias{doMultiStraussHard}
+\alias{dppDpcf}
 \alias{dppmFixAlgorithm}
 \alias{dppmFixIntensity}
 \alias{envelopeEngine}
@@ -79,6 +80,7 @@
 \alias{equalpairs}          
 \alias{evalCovar}
 \alias{evalCovar.ppm}
+\alias{evalCovar.slrm}
 \alias{evalCovariate}
 \alias{evalInteraction}
 \alias{evalInterEngine}
@@ -146,9 +148,11 @@
 \alias{is.interact}
 \alias{is.marked.mppm}    
 \alias{is.marked.msr}    
+\alias{is.marked.slrm}
 \alias{is.mppm}
 \alias{is.multitype.mppm}    
 \alias{is.multitype.msr}    
+\alias{is.multitype.slrm}    
 \alias{is.poisson.mppm}
 \alias{is.scov}
 \alias{k3engine}
@@ -157,12 +161,14 @@
 \alias{Krect.engine}
 \alias{Kount}
 \alias{Kwtsum}               
-\alias{Kpcf.kppm}               
+\alias{Kpcf.kppm}
+\alias{Kmodel.slrm}
 \alias{killinteraction}
 \alias{km.rs.opt}
 \alias{kppmComLik}
 \alias{kppmMinCon}
 \alias{kppmPalmLik}
+\alias{kppmCLadap}
 \alias{kraever}
 \alias{kraeverRandomFields}
 \alias{labels.ppm}
@@ -204,6 +210,7 @@
 \alias{partialModelMatrix}
 \alias{pcf3engine}
 \alias{pcfmulti.inhom}
+\alias{pcfmodel.slrm}
 \alias{ploterodewin}
 \alias{ploterodeimage}
 \alias{plot.addvar}
@@ -280,6 +287,7 @@
 \alias{quadrat.testEngine}
 \alias{ratfv}
 \alias{RandomFieldsSafe}
+\alias{reach.slrm}
 \alias{rebadge.as.crossfun}
 \alias{rebadge.as.dotfun}
 \alias{rebadge.fv}
@@ -345,6 +353,7 @@
 \alias{simulrecipe}              
 \alias{slr.prepare}
 \alias{slrAssemblePixelData}
+\alias{slrmInfluence}
 \alias{Smooth.solist}
 \alias{smoothcrossEngine}              
 \alias{smoothpointsEngine}
@@ -487,6 +496,7 @@ digital.volume(range, nval, vside)
 \method{dimnames}{msr}(x)
 distributecbind(x)
 doMultiStraussHard(iradii, hradii, types)
+dppDpcf(model, \dots)
 dppmFixIntensity(DPP, lambda, po)
 dppmFixAlgorithm(algorithm, changealgorithm, clusters, startpar)
 envelopeEngine(X, fun, simul,
@@ -520,6 +530,9 @@ equalpairs(U, X, marked=FALSE)
 evalCovar(model, covariate, \dots)
 \method{evalCovar}{ppm}(model, covariate, \dots, lambdatype,
           dimyx, eps, interpolate, jitter, jitterfactor,
+          modelname, covname, dataname, subset) 
+\method{evalCovar}{slrm}(model, covariate, \dots, lambdatype,
+          jitter, jitterfactor,
           modelname, covname, dataname, subset) 
 evalCovariate(covariate, locations)
 evalInteraction(X,P,E,interaction,correction,splitInf,\dots,
@@ -592,9 +605,11 @@ is.expandable(x)
 is.interact(x)
 \method{is.marked}{mppm}(X, \dots)
 \method{is.marked}{msr}(X, \dots)
+\method{is.marked}{slrm}(X, \dots)
 is.mppm(x)
 \method{is.multitype}{mppm}(X, \dots)
 \method{is.multitype}{msr}(X, \dots)
+\method{is.multitype}{slrm}(X, \dots)
 \method{is.poisson}{mppm}(x)
 is.scov(x)
 k3engine(x, y, z, box, rmax, nrval, correction)
@@ -605,6 +620,7 @@ Krect.engine(X, rmax, nr, correction, weights,
 Kount(dIJ, bI, b, breaks)
 Kwtsum(dIJ, bI, wIJ, b, w, breaks, fatal)
 Kpcf.kppm(model, what)
+\method{Kmodel}{slrm}(model, \dots)
 killinteraction(model)
 km.rs.opt(o, cc, d, breaks, KM, RS)
 kppmComLik(X, Xname, po, clusters, control, weightfun, rmax,
@@ -613,6 +629,9 @@ kppmMinCon(X, Xname, po, clusters, control, statistic, statargs,
            algorithm, DPP, \dots)
 kppmPalmLik(X, Xname, po, clusters, control, weightfun, rmax, 
            algorithm, DPP, \dots, pint)
+kppmCLadap(X, Xname, po, clusters, control, weightfun, 
+           rmax, epsilon, DPP, algorithm, \dots,
+           startparm, globStrat)
 kraever(package, fatal)
 kraeverRandomFields()
 \method{labels}{ppm}(object, \dots)
@@ -694,6 +713,7 @@ pcfmulti.inhom(X, I, J, lambdaI = NULL, lambdaJ = NULL, \dots,
                sigma = NULL, varcov = NULL,
                Iname = "points satisfying condition I",
                Jname = "points satisfying condition J")
+\method{pcfmodel}{slrm}(model, \dots)
 ploterodewin(W1, W2, col.edge, col.inside, do.plot, \dots)
 ploterodeimage(W, Z, \dots, Wcol, rangeZ, colsZ, do.plot)
 \method{plot}{addvar}(x, \dots, do.points=FALSE)
@@ -772,6 +792,7 @@ quad.mppm(x)
 quadBlockSizes(nX, nD, p, nMAX, announce)
 RandomFieldsSafe()
 ratfv(df, numer, denom, \dots, ratio)
+\method{reach}{slrm}(x, \dots)
 rebadge.as.crossfun(x, main, sub, i, j)
 rebadge.as.dotfun(x, main, sub, i)
 rebadge.fv(x, new.ylab, new.fname, tags, new.desc, new.labl, new.yexp,
@@ -809,7 +830,8 @@ resid1panel(observedX, observedV,
 resolve.2D.kernel(\dots,
             sigma, varcov, x, mindist, adjust, bwfun, allow.zero)
 rhohatEngine(model, covariate, reference, volume, \dots,
-               subset, weights, method, horvitz, smoother, resolution, 
+               subset, weights, method, horvitz, smoother,
+               resolution, evalCovarArgs,
                n, bw, adjust, from, to, 
                bwref, covname, covunits, confidence,
                breaks,
@@ -866,6 +888,7 @@ signalStatus(x, errors.only)
 simulrecipe(type, expr, envir, csr, pois, constraints)
 slr.prepare(CallInfo, envir, data, dataAtPoints, splitby, clip)
 slrAssemblePixelData(Y, Yname, W, covimages, dataAtPoints, pixelarea)
+slrmInfluence(model, what, \dots)
 \method{Smooth}{solist}(X, \dots)
 smoothcrossEngine(Xdata, Xquery, values, sigma, \dots,
                     weights, varcov,

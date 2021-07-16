@@ -1,14 +1,14 @@
 #'
 #'  rhohat.R
 #'
-#'  $Revision: 1.95 $  $Date: 2021/06/13 04:50:00 $
+#'  $Revision: 1.98 $  $Date: 2021/06/28 03:45:18 $
 #'
 #'  Non-parametric estimation of a transformation rho(z) determining
 #'  the intensity function lambda(u) of a point process in terms of a
 #'  spatial covariate Z(u) through lambda(u) = rho(Z(u)).
 #'  More generally allows offsets etc.
 
-#' Copyright (c) Adrian Baddeley 2015-2019
+#' Copyright (c) Adrian Baddeley 2015-2021
 #' GNU Public Licence GPL >= 2.0
 
 rhohat <- function(object, covariate, ...) {
@@ -155,7 +155,8 @@ rhohatEngine <- function(model, covariate,
                          smoother=c("kernel", "local",
                                     "decreasing", "increasing",
                                     "piecewise"),
-                         resolution=list(), 
+                         resolution=list(),
+                         evalCovarArgs=list(),
                          n=512, bw="nrd0", adjust=1, from=NULL, to=NULL, 
                          bwref=bw, covname, covunits=NULL, confidence=0.95,
                          breaks=NULL,
@@ -163,10 +164,11 @@ rhohatEngine <- function(model, covariate,
   reference <- match.arg(reference)
   # evaluate the covariate at data points and at pixels
   stuff <- do.call(evalCovar,
-                   append(list(model=model,
-                               covariate=covariate,
-                               subset=subset),
-                          resolution))
+                   c(list(model=model,
+                          covariate=covariate,
+                          subset=subset),
+                     resolution,
+                     evalCovarArgs))
   # unpack
   values <- stuff$values
   # values at each data point
@@ -514,15 +516,15 @@ rhohatCalc <- local({
         method <- "ratio"
       }
       ## convert numerical covariate values to factor
-      Zvalues <- cut(Zvalues, breaks=breaks)
-      ZX      <- cut(ZX, breaks=breaks)
+      cutZvalues <- cut(Zvalues, breaks=breaks)
+      cutZX      <- cut(ZX,      breaks=breaks)
       ## denominator
-      areas <- denom * tapplysum(lambda, list(Zvalues))/sum(lambda)
+      areas <- denom * tapplysum(lambda, list(cutZvalues))/sum(lambda)
       ## numerator 
       counts <- if(is.null(weights)) {
-                  as.numeric(table(ZX))
+                  as.numeric(table(cutZX))
                 } else {
-                  tapplysum(weights, list(ZX))
+                  tapplysum(weights, list(cutZX))
                 }
       ## estimate of rho(z) for each band of z values
       rhovals <- counts/areas
@@ -535,7 +537,7 @@ rhohatCalc <- local({
       #' variance
       vvvname <- "Variance of estimator"
       vvvlabel <- paste("bold(Var)~hat(%s)", paren(covname), sep="")
-      varnum <- if(is.null(weights)) counts else tapplysum(weights^2, list(ZX))
+      varnum <- if(is.null(weights)) counts else tapplysum(weights^2, list(cutZX))
       varvals <- varnum/areas^2
       varfun <- stepfun(x = breaks, y=c(0, varvals, 0))
       vvv <- varfun(xxx)

@@ -3,8 +3,9 @@
 #
 #  surface of the objective function for an M-estimator
 #
-#  $Revision: 1.8 $ $Date: 2020/12/19 05:25:06 $
+#  $Revision: 1.14 $ $Date: 2021/07/07 01:41:47 $
 #
+
 
 objsurf <- function(x, ...) {
   UseMethod("objsurf")
@@ -32,14 +33,16 @@ objsurf.kppm <- objsurf.dppm <- function(x, ..., ngrid=32, ratio=1.5, verbose=TR
 }
 
 objsurf.minconfit <- function(x, ..., ngrid=32, ratio=1.5, verbose=TRUE) {
-  optpar  <- x$par.canon %orifnull% x$par
+  optpar  <- x$par
   objfun  <- x$objfun
   objargs <- x$objargs
   dotargs <- x$dotargs
-  objsurfEngine(objfun, optpar, objargs, ...,
-                dotargs=dotargs,
-                ngrid=ngrid, ratio=ratio, verbose=verbose)
+  result <- objsurfEngine(objfun, optpar, objargs, ...,
+                          dotargs=dotargs,
+                          ngrid=ngrid, ratio=ratio, verbose=verbose)
+  return(result)
 }
+
 
 objsurfEngine <- function(objfun, optpar, objargs, 
                           ...,
@@ -77,12 +80,40 @@ print.objsurf <- function(x, ...) {
   optpar <- attr(x, "optpar")
   objname <- attr(x, "objname")
   nama <- names(optpar)
-  cat("Parameter ranges:\n")
-  cat(paste(paste0(nama[1], ":"), prange(range(x$x)), "\n"))
-  cat(paste(paste0(nama[2], ":"), prange(range(x$y)), "\n"))
-  cat(paste("Function value:", objname, "\n"))
+  cat(paste("\tFunction value:", objname, "\n"))
+  cat("Parameter limits:\n")
+  cat(paste("\t", paste0(nama[1L], ":"), prange(signif(range(x$x), 4)), "\n"))
+  cat(paste("\t", paste0(nama[2L], ":"), prange(signif(range(x$y), 4)), "\n"))
   invisible(NULL)
 }
+
+summary.objsurf <- function(object, ...) {
+  y <- list(xrange=range(object$x),
+            yrange=range(object$y),
+            objrange=range(object$z),
+            optpar=as.list(attr(object, "optpar")),
+            objname=attr(object, "objname")
+            )
+  class(y) <- c("summary.objsurf", class(y))
+  return(y)
+}
+
+print.summary.objsurf <- function(x, ...) {
+  with(x, {
+    cat("Objective function surface\n")
+    cat(paste("\tFunction value:", objname, "\n"))
+    cat(paste("\tRange of values:", prange(objrange), "\n"))
+    cat("Parameter limits (xrange, yrange):\n")
+    nama <- names(optpar)
+    cat(paste("\t", paste0(nama[1L], ":"), prange(xrange), "\n"))
+    cat(paste("\t", paste0(nama[2L], ":"), prange(yrange), "\n"))
+    cat("Selected parameter values (optpar):\n")
+    cat(paste("\t", paste(nama, "=", optpar, collapse=", "), "\n"))
+  })
+  return(invisible(NULL))
+}
+
+
 
 image.objsurf <- plot.objsurf <- function(x, ...) {
   xname <- short.deparse(substitute(x))
@@ -93,15 +124,17 @@ image.objsurf <- plot.objsurf <- function(x, ...) {
   do.call(image,
           resolve.defaults(list(x=quote(xx)), 
                            list(...),
-                           list(xlab=nama[1], ylab=nama[2], main=xname)))
-  abline(v=optpar[1], lty=3)
-  abline(h=optpar[2], lty=3)
-  invisible(NULL)
+                           list(xlab=nama[1L], ylab=nama[2L], main=xname)))
+  abline(v=optpar[1L], lty=3)
+  abline(h=optpar[2L], lty=3)
+  return(invisible(NULL))
 }
+
+
 
 contour.objsurf <- function(x, ...) {
   xname <- short.deparse(substitute(x))
-  optpar <- attr(x, "optpar")
+  optpar <- summary(x)[["optpar"]]
   nama <- names(optpar)
   xx <- unclass(x)
   dont.complain.about(xx)
@@ -111,7 +144,7 @@ contour.objsurf <- function(x, ...) {
                            list(xlab=nama[1], ylab=nama[2], main=xname)))
   abline(v=optpar[1], lty=3)
   abline(h=optpar[2], lty=3)
-  invisible(NULL)
+  return(invisible(NULL))
 }
 
   
@@ -129,7 +162,7 @@ persp.objsurf <- function(x, ...) {
                                 list(...),
                                 list(xlab=nama[1], ylab=nama[2],
                                      zlab=objname, main=xname)))
-  invisible(r)
+  return(invisible(r))
 }
 
 

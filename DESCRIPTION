@@ -1,6 +1,6 @@
 Package: spatstat.core
-Version: 2.2-0
-Date: 2021-06-16
+Version: 2.3-0
+Date: 2021-07-15
 Title: Core Functionality of the 'spatstat' Family
 Authors@R: c(person("Adrian", "Baddeley", 
                     role = c("aut", "cre"),
@@ -20,6 +20,8 @@ Authors@R: c(person("Adrian", "Baddeley",
 	     person("Ottmar", "Cronie",
 	            role = "ctb"),
 	     person("Tilman", "Davies",
+	            role = "ctb"),
+	     person("Chiara", "Fend",
 	            role = "ctb"),
 	     person("Julian", "Gilbey",
 	            role = "ctb"),
@@ -47,12 +49,14 @@ Authors@R: c(person("Adrian", "Baddeley",
 	            role = "ctb"))
 Maintainer: Adrian Baddeley <Adrian.Baddeley@curtin.edu.au>
 Depends: R (>= 3.5.0), spatstat.data (>= 2.1-0), spatstat.geom (>=
-        2.2-0), stats, graphics, grDevices, utils, methods, nlme, rpart
+        2.2-0.003), stats, graphics, grDevices, utils, methods, nlme,
+        rpart
 Imports: spatstat.utils (>= 2.2-0), spatstat.sparse (>= 2.0-0), mgcv,
         Matrix, abind, tensor, goftest (>= 1.2-2)
 Suggests: sm, maptools (>= 0.9-9), gsl, locfit, spatial, RandomFields
         (>= 3.1.24.1), RandomFieldsUtils(>= 0.3.3.1), fftwtools (>=
-        0.9-8), spatstat.linnet (>= 2.0-0), spatstat (>= 2.0-0)
+        0.9-8), nleqslv, spatstat.linnet (>= 2.0-0), spatstat (>=
+        2.0-0)
 Description: Functionality for data analysis and modelling of
 	     spatial data, mainly spatial point patterns,
 	     in the 'spatstat' family of packages.
@@ -67,7 +71,7 @@ URL: http://spatstat.org/
 NeedsCompilation: yes
 ByteCompile: true
 BugReports: https://github.com/spatstat/spatstat.core/issues
-Packaged: 2021-06-16 07:32:44 UTC; adrian
+Packaged: 2021-07-15 12:55:57 UTC; adrian
 Author: Adrian Baddeley [aut, cre],
   Rolf Turner [aut],
   Ege Rubak [aut],
@@ -76,6 +80,7 @@ Author: Adrian Baddeley [aut, cre],
   Jean-Francois Coeurjolly [ctb],
   Ottmar Cronie [ctb],
   Tilman Davies [ctb],
+  Chiara Fend [ctb],
   Julian Gilbey [ctb],
   Yongtao Guan [ctb],
   Ute Hahn [ctb],
@@ -89,4 +94,4 @@ Author: Adrian Baddeley [aut, cre],
   Rasmus Plenge Waagepetersen [ctb],
   Hangsheng Wang [ctb]
 Repository: CRAN
-Date/Publication: 2021-06-17 11:50:02 UTC
+Date/Publication: 2021-07-16 09:20:02 UTC

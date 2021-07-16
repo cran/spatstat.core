@@ -1,5 +1,10 @@
-## lookup table of explicitly-known K functions and pcf
-## and algorithms for computing sensible starting parameters
+##        clusterinfo.R
+## 
+##   Lookup table of explicitly-known K functions and pcf
+##   and algorithms for computing sensible starting parameters
+##
+##   $Revision: 1.24 $ $Date: 2021/07/14 07:33:19 $
+
 
 .Spatstat.ClusterModelInfoTable <- 
   list(
@@ -12,11 +17,11 @@
          printmodelname = function(...) "Thomas process", # Used by print.kppm
          parnames = c("kappa", "sigma2"),
          clustargsnames = NULL,
-         checkpar = function(par, old = TRUE, ..., strict=TRUE){
+         checkpar = function(par, old = TRUE, ...){
              if(is.null(par))
-                 par <- c(kappa=1,scale=1)
-             if(strict && any(par<=0))
-                 stop("par values must be positive.", call.=FALSE)
+               par <- c(kappa=1,scale=1)
+             if(any(par<=0))
+               stop("par values must be positive.", call.=FALSE)
              nam <- check.named.vector(par, c("kappa","sigma2"),
                                        onError="null")
              if(is.null(nam)) {
@@ -25,8 +30,8 @@
                par[2L] <- par[2L]^2
              }
              if(!old){
-                 names(par)[2L] <- "scale"
-                 par[2L] <- sqrt(par[2L])
+               names(par)[2L] <- "scale"
+               par[2L] <- sqrt(par[2L])
              }
              return(par)
          },
@@ -43,7 +48,8 @@
              dots <- list(...)
              par <- dots$par
              # Choose the first of the possible supplied values for scale:
-             scale <- c(dots$scale, dots$par[["scale"]], dots$sigma, dots$par[["sigma"]])[1L]
+             scale <- c(dots$scale, dots$par[["scale"]],
+                        dots$sigma, dots$par[["sigma"]])[1L]
              if(is.null(scale))
                stop(paste("Argument ", sQuote("scale"), " must be given."),
                     call.=FALSE)
@@ -68,16 +74,29 @@
          },
          isPCP=TRUE,
          ## K-function
-         K = function(par,rvals, ..., strict=TRUE){
-           if(strict && any(par <= 0))
+         K = function(par,rvals, ...){
+           if(any(par <= 0))
              return(rep.int(Inf, length(rvals)))
            pi*rvals^2+(1-exp(-rvals^2/(4*par[2L])))/par[1L]
          },
          ## pair correlation function
-         pcf= function(par,rvals, ..., strict=TRUE){
-           if(strict && any(par <= 0))
+         pcf= function(par,rvals, ...){
+           if(any(par <= 0))
              return(rep.int(Inf, length(rvals)))
            1 + exp(-rvals^2/(4 * par[2L]))/(4 * pi * par[1L] * par[2L])
+         },
+         ## gradient of pcf (contributed by Chiara Fend)
+         Dpcf= function(par,rvals, ...){
+           if(any(par <= 0)){
+             dsigma2 <- rep.int(Inf, length(rvals))
+             dkappa <- rep.int(Inf, length(rvals))
+           } else {
+             dsigma2 <- exp(-rvals^2/(4 * par[2L])) * (rvals/(4^2 * pi * par[1L] * par[2L]^3) - 1/(4 * pi * par[1L] * par[2L]^2))
+             dkappa <- -exp(-rvals^2/(4 * par[2L]))/(4 * pi * par[1L]^2 * par[2L])
+           }
+           out <- rbind(dkappa, dsigma2)
+           rownames(out) <- c("kappa","sigma2")
+           return(out)
          },
          ## sensible starting parameters
          selfstart = function(X) {
@@ -92,20 +111,8 @@
            mu <- if(is.numeric(lambda) && length(lambda) == 1)
              lambda/kappa else NA
            c(kappa=kappa, sigma=sigma, mu=mu)
-         },
-         ## Experimental: convert to/from canonical cluster parameters
-         tocanonical = function(par) {
-           kappa <- par[[1L]]
-           sigma2 <- par[[2L]]
-           c(strength=1/(4 * pi * kappa * sigma2), scale=sqrt(sigma2))
-         },
-         tohuman = function(can) {
-           strength <- can[[1L]]
-           scale <- can[[2L]]
-           sigma2 <- scale^2
-           c(kappa=1/(4 * pi * strength * sigma2), sigma2=sigma2)
          }
-         ),
+       ),
        ## ...............................................
        MatClust=list(
          ## Matern Cluster process: old par = (kappa, R) (internally used everywhere)
@@ -174,7 +181,23 @@
              g <- funaux$g
              y <- 1 + (1/(pi * kappa * R^2)) * g(rvals/(2 * R))
              return(y)
-           },
+         },
+         Dpcf= function(par,rvals, ..., funaux){
+           kappa <- par[1L]
+           R <- par[2L]
+           g <- funaux$g
+           gprime <- funaux$gprime
+           if(any(par <= 0)){
+             dkappa <- rep.int(Inf, length(rvals))
+             dR <- rep.int(Inf, length(rvals))
+           } else {
+             dkappa <- -g(rvals/(2 * R)) / (pi * kappa^2 * R^2)
+             dR <- -2*g(rvals/(2 * R))/(pi * kappa * R^3) - (1/(pi * kappa * R^2)) * gprime(rvals/(2 * R))*rvals/(2*R^2)
+           }
+           out <- rbind(dkappa, dR)
+           rownames(out) <- c("kappa","R")
+           return(out)
+         },         
          funaux=list(
            Hfun=function(zz) {
              ok <- (zz < 1)
@@ -204,6 +227,14 @@
              h[!ok] <- 0
              z <- zz[ok]
              h[ok] <- (2/pi) * (acos(z) - z * sqrt(1 - z^2))
+             return(h)
+           },
+           gprime=function(zz) {
+             ok <- (zz < 1)
+             h <- numeric(length(zz))
+             h[!ok] <- 0
+             z <- zz[ok]
+             h[ok] <- -(2/pi) * 2 * sqrt(1 - z^2)
              return(h)
            }),
          ## sensible starting paramters
@@ -289,6 +320,18 @@
            if(any(par <= 0))
              return(rep.int(Inf, length(rvals)))
            1 + ((1 + rvals^2/par[2L])^(-1.5))/(2 * pi * par[2L] * par[1L])
+         },
+         Dpcf= function(par,rvals, ...){
+           if(any(par <= 0)){
+             dkappa <- rep.int(Inf, length(rvals))
+             deta2 <- rep.int(Inf, length(rvals))
+           } else {
+             dkappa <- -(1 + rvals^2/par[2L])^(-1.5)/(2 * pi * par[2L] * par[1L]^2)
+             deta2 <- 1.5 * rvals^2 * (1 + rvals^2/par[2L])^(-2.5)/(2 * par[2L]^3 * par[1L] * pi) - (1 + rvals^2/par[2L])^(-1.5)/(2*pi*par[1L]*par[2L]^2)
+           }
+           out <- rbind(dkappa, deta2)
+           rownames(out) <- c("kappa","eta2")
+           return(out)
          },
          selfstart = function(X) {
            kappa <- intensity(X)
@@ -461,6 +504,7 @@
                         1)
            return(1 + sig2 * fr)
          },
+         Dpcf = NULL,
          parhandler = function(..., nu.ker = -1/4) {
            check.1.real(nu.ker)
            stopifnot(nu.ker > -1/2)
@@ -606,6 +650,16 @@
              gtheo <- exp(RandomFields::RFcov(model=mod, x=rvals))
            }
            return(gtheo)
+         },
+         Dpcf= function(par,rvals, ..., model){
+           if(!identical(model, "exponential")) {
+             stop("Gradient of the pcf not available for this model.")
+           } 
+           dsigma2 <- exp(-rvals/par[2L]) * exp(par[1L]*exp(-rvals/par[2L]))
+           dalpha <- rvals * par[1L] * exp(-rvals/par[2L]) * exp(par[1L]*exp(-rvals/par[2L]))/par[2L]^2
+           out <- rbind(dsigma2, dalpha)
+           rownames(out) <- c("sigma2","alpha")
+           return(out)
          },
          parhandler=function(model = "exponential", ...) {
            if(!is.character(model))

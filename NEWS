@@ -1,4 +1,109 @@
 
+        CHANGES IN spatstat.core VERSION 2.3-0
+
+OVERVIEW
+
+    o We thank Chiara Fend for contributions.
+    
+    o Extensive support for spatial logistic regression models.
+
+    o New fitting method in kppm and dppm.
+
+    o Transect of an image along a curve.
+
+    o Image cross-correlation and cross-covariance.
+    
+    o Summary method for 'objsurf'.
+
+    o Minor bug fixes.
+
+NEW FUNCTIONS
+
+    o response
+    Generic function which extracts the values of the response
+    in a fitted model. There are methods for lm, glm (which extract the
+    numeric vector of responses), and ppm, kppm, slrm, lppm and mppm
+    (which extract the original data point pattern).
+
+    o cov.im, cor.im
+    Correlation or covariance between several pixel images.
+    
+    o summary.objsurf, print.summary.objsurf
+    Summary method for 'objsurf'
+
+    o residuals.slrm
+    Residuals for spatial logistic regression models.
+    
+    o leverage.slrm, influence.slrm, dfbetas.slrm, dffit.slrm
+    Leverage and influence diagnostics for spatial logistic regression models.
+    
+    o rhohat.slrm
+    Method for 'rhohat' for spatial logistic regression models.
+
+    o envelope.slrm
+    Method for 'envelope' for spatial logistic regression models.
+
+    o intensity.slrm
+    Method for 'intensity' for spatial logistic regression models.
+
+    o deviance.slrm
+    Method for 'deviance' for spatial logistic regression models.
+
+    o pseudoR2.slrm
+    Method for 'pseudoR2' for spatial logistic regression models.
+
+    o quadrat.test.slrm
+    Method for 'quadrat.test' for spatial logistic regression models.
+
+    o parameters.slrm
+    Method for 'parameters' for spatial logistic regression models.
+
+    o valid.slrm
+    Method for 'valid' for spatial logistic regression models.
+
+    o emend.slrm
+    Method for 'emend' for spatial logistic regression models.
+
+    o roc.slrm
+    Method for 'roc' for spatial logistic regression models.
+
+    o auc.slrm
+    Method for 'auc' for spatial logistic regression models.
+
+    o Window.slrm, as.owin.slrm
+    Methods for 'Window' and 'as.owin' for spatial logistic regression models.
+
+SIGNIFICANT USER-VISIBLE CHANGES
+
+    o kppm, dppm
+    New option 'method="adapcl"' performs adaptive composite likelihood fitting.
+    [Contributed by Chiara Fend.]
+    
+    o transect.im
+    New argument 'curve' allows the user to specify a curved transect.
+
+BUG FIXES
+
+    o clusterfield
+    Values of the cluster field were slightly incorrect (slightly higher
+    than the correct values) near the edge of the window,
+    because an 'edge correction' was mistakenly applied.
+    Fixed.
+
+    o rhohat
+    The rug plot (produced by plot.rhohat) was incorrect
+    when rhohat was called with method="piecewise".
+    Fixed.
+
+    o markcrosscorr
+    Did not recognise the option 'correction="none"'.
+    Fixed.
+
+   o roc.ppp
+   The default plot of the result of roc.ppp
+   did not include the diagonal line 'y=x'.
+   Fixed.
+   
         CHANGES IN spatstat.core VERSION 2.2-0
 
 OVERVIEW

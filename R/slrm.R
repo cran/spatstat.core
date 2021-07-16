@@ -3,7 +3,7 @@
 #
 #  Spatial Logistic Regression
 #
-#  $Revision: 1.40 $   $Date: 2021/04/30 08:42:59 $
+#  $Revision: 1.54 $   $Date: 2021/07/04 14:51:41 $
 #
 
 slrm <- function(formula, ..., data=NULL, offset=TRUE, link="logit",
@@ -418,6 +418,12 @@ fitted.slrm <- function(object, ...) {
   predict(object, type="probabilities")
 }
 
+intensity.slrm <- function(X, ...) {
+  Z <- predict(X, type="intensity", ..., newdata=NULL, window=NULL)
+  if(is.stationary(X)) Z <- mean(Z)
+  return(Z)
+}
+
 predict.slrm <- function(object, ..., type="intensity",
                          newdata=NULL, window=NULL) {
   type <- pickoption("type", type,
@@ -556,11 +562,22 @@ labels.slrm <- function(object, ...) {
   return(lab[okterms])
 }
 
+deviance.slrm <- function(object, ...) {
+  deviance(object$Fit$FIT, ...)
+}
+
+
 extractAIC.slrm <- function (fit, scale = 0, k = 2, ...)
 {
     edf <- length(coef(fit))
     aic <- AIC(fit)
     c(edf, aic + (k - 2) * edf)
+}
+
+model.frame.slrm <- function(formula, ...) {
+  FIT <- formula$Fit$FIT
+  mf <- model.frame(FIT, ...)
+  return(mf)
 }
 
 model.matrix.slrm <- function(object,..., keepNA=TRUE) {
@@ -576,6 +593,7 @@ model.matrix.slrm <- function(object,..., keepNA=TRUE) {
       stop("Internal error in patching NA's")
   mmplus <- matrix(NA, nrow(df), ncol(mm))
   mmplus[comp, ] <- mm
+  colnames(mmplus) <- colnames(mm)
   return(mmplus)
 }
 
@@ -635,7 +653,6 @@ anova.slrm <- local({
   anova.slrm
 })
 
-
 vcov.slrm <- function(object, ..., what=c("vcov", "corr", "fisher", "Fisher")) {
   stopifnot(is.slrm(object))
   what <- match.arg(what)
@@ -662,15 +679,41 @@ unitname.slrm <- function(x) {
   return(x)
 }
 
+domain.slrm <- Window.slrm <- function(X, ..., from=c("points", "covariates")) {
+  from <- match.arg(from)
+  as.owin(X, ..., from=from)
+}
+
+as.owin.slrm <- function(W, ..., from=c("points", "covariates")) {
+  from <- match.arg(from)
+  U <- switch(from,
+              points     = W$Data$response,
+              covariates = W$Data$W)
+  V <- as.owin(U, ...)
+  return(V)
+}
+  
 is.stationary.slrm <- function(x) {
-  fo <- formula(x)
-  trend <- fo[c(1,3)]
+  trend <- rhs.of.formula(formula(x))
   return(identical.formulae(trend, ~1))
 }
 
 is.poisson.slrm <- function(x) { TRUE }
 
+is.marked.slrm <- is.multitype.slrm <- function(X, ...) { FALSE }
 
+reach.slrm <- function(x, ...) { 0 }
+
+## pseudoR2.slrm is defined in ppmclass.R
+
+Kmodel.slrm <- function(model, ...) { function(r) { pi * r^2 } }
+
+pcfmodel.slrm <- function(model, ...) { function(r) { rep.int(1, length(r)) } }
+
+parameters.slrm <- function(model, ...) { list(trend=coef(model)) }  
+
+## ............ SIMULATION ..............................
+  
 simulate.slrm <- function(object, nsim=1, seed=NULL, ...,
                           window=NULL, covariates=NULL, 
                           verbose=TRUE, drop=FALSE) {
@@ -714,3 +757,191 @@ simulate.slrm <- function(object, nsim=1, seed=NULL, ...,
   return(out)
 }
 
+## ------------------ residuals --------------------------------
+
+residuals.slrm <- function(object,
+                           type=c("raw", "deviance", "pearson", "working", 
+                                  "response", "partial", "score"),
+                           ...) {
+  type <- match.arg(type)
+  otype <- if(type %in% c("raw", "score")) "response" else type
+  FIT <- object$Fit$FIT  
+  W <- object$Data$W
+  res <- residuals(FIT, type=otype, ...)
+  if(type == "score") {
+    M <- model.matrix(object)
+    res <- res * M
+    colnames(res) <- colnames(M)
+  }
+  R <- wrangle2image(res, W)
+  return(R)
+}
+
+
+## ------------------ leverage and influence -------------------
+
+
+leverage.slrm <- function(model, ...) {
+  slrmInfluence(model, "leverage", ...)[["leverage"]]
+}
+
+influence.slrm <- function(model, ...) {
+  slrmInfluence(model, "influence", ...)[["influence"]]
+}
+
+dfbetas.slrm <- function(model, ...) {
+  slrmInfluence(model, "dfbetas", ...)[["dfbetas"]]
+}
+
+dffit.slrm <- function(object, ...) {
+  slrmInfluence(object, "dffit", ...)[["dffit"]]
+}
+
+
+slrmInfluence <- function(model,
+                          what=c("all", "leverage", "influence",
+                                 "dfbetas", "dffit"),
+                          ...) {
+  stopifnot(is.slrm(model))
+  what <- match.arg(what, several.ok=TRUE)
+  if("all" %in% what)
+    what <- c("leverage", "influence", "dfbetas", "dffit")
+  FIT <- model$Fit$FIT
+  W <- model$Data$W
+  nr <- nrow(W)
+  nc <- ncol(W)
+  result <- list()
+  if("leverage" %in% what) {
+    h <- hatvalues(FIT, ...)
+    result$leverage <- wrangle2image(h, W)
+  }
+  if("influence" %in% what) {
+    h <- hatvalues(FIT, ...)
+    rP <- rstandard(FIT, type="pearson", ...)
+    p <- length(coef(model))
+    s <- (1/p) * rP^2 * h/(1-h)
+    result$influence <- wrangle2image(s, W)
+  }
+  if("dfbetas" %in% what) {
+    dfb <- dfbetas(FIT, ...)
+    result$dfbetas <- wrangle2image(dfb, W)
+  }
+  if("dffit" %in% what) {
+    dfb <- dfbeta(FIT, ...)  #sic
+    X <- model.matrix(model) # sic
+    if(is.null(dim(X)) || is.null(dim(dfb)) || !all(dim(X) == dim(dfb)))
+      stop("Internal error: model.matrix dimensions incompatible with dfbeta")
+    dff <- rowSums(X * dfb)
+    result$dffit <- wrangle2image(dff, W)
+  }
+
+  return(result)
+}
+
+valid.slrm <- function(object, warn=TRUE, ...) {
+  verifyclass(object, "slrm")
+  coeffs <- coef(object)
+  ok <- all(is.finite(coeffs))
+  return(ok)
+}
+  
+emend.slrm <- local({
+  tracemessage <- function(depth, ...) {
+    if(depth == 0) return(NULL)
+    spacer <- paste(rep.int("  ", depth), collapse="")
+    marker <- ngettext(depth, "trace", paste("trace", depth))
+    marker <- paren(marker, "[")
+    splat(paste0(spacer, marker, " ", paste(...)))
+  }
+  leaving <- function(depth) {
+    tracemessage(depth, ngettext(depth, "Returning.", "Exiting level."))
+  }
+  emend.slrm <- function(object, ..., fatal=FALSE, trace=FALSE) {
+    verifyclass(object, "slrm")
+    fast <- spatstat.options("project.fast")
+    # user specifies 'trace' as logical
+    # but 'trace' can also be integer representing trace depth
+    td <- as.integer(trace)
+    trace <- (td > 0)
+    tdnext <- if(trace) td+1 else 0
+    if(valid.slrm(object)) {
+      tracemessage(td, "Model is valid.")
+      leaving(td)
+      return(object)
+    }
+    # Fitted coefficients
+    coef.orig <- coeffs <- coef(object)
+    coefnames  <- names(coeffs)
+    # Trend terms in trend formula
+    trendterms <- attr(terms(object), "term.labels")
+    # Mapping from coefficients to terms of GLM
+    coef2term  <- attr(model.matrix(object), "assign")
+    istrend <- (coef2term > 0)
+    # Identify non-finite trend coefficients
+    bad <-  !is.finite(coeffs)
+    if(!any(bad)) {
+      tracemessage(td, "Trend terms are valid.")
+    } else {
+      nbad <- sum(bad)
+      tracemessage(td,
+                   "Non-finite ",
+                   ngettext(nbad,
+                            "coefficient for term ",
+                            "coefficients for terms "),
+                   commasep(sQuote(trendterms[coef2term[bad]])))
+      if(fast) {
+        # remove first illegal term
+        firstbad <- min(which(bad))
+        badterm <- trendterms[coef2term[firstbad]]
+        # remove this term from model
+        tracemessage(td, "Removing term ", sQuote(badterm))
+        removebad <- as.formula(paste("~ . - ", badterm), env=object$callframe)
+        newobject <- update(object, removebad)
+        if(trace) {
+          tracemessage(td, "Updated model:")
+          print(newobject)
+        }
+        # recurse
+        newobject <- emend.slrm(newobject, fatal=fatal, trace=tdnext)
+        # return
+        leaving(td)
+        return(newobject)
+      } else {
+        # consider all illegal terms
+        bestobject <- NULL
+        for(i in which(bad)) {
+          badterm <- trendterms[coef2term[i]]
+          # remove this term from model
+          tracemessage(td, "Considering removing term ", sQuote(badterm))
+          removebad <- as.formula(paste("~ . - ", badterm),
+                                  env=object$callframe)
+          object.i <- update(object, removebad)
+          if(trace) {
+            tracemessage(td, "Considering updated model:")
+            print(object.i)
+          }
+          # recurse
+          object.i <- emend.slrm(object.i, fatal=fatal, trace=tdnext)
+          # evaluate log likelihood
+          logL.i   <- logLik(object.i, warn=FALSE)
+          tracemessage(td, "max log likelihood = ", logL.i)
+          # optimise
+          if(is.null(bestobject) || (logLik(bestobject, warn=FALSE) < logL.i))
+            bestobject <- object.i
+        }
+        if(trace) {
+          tracemessage(td, "Best submodel:")
+          print(bestobject)
+        }
+        # return
+        leaving(td)
+        return(bestobject)
+      }
+    }
+    object$projected <- TRUE
+    object$coef.orig  <- coef.orig
+    leaving(td)
+    return(object)
+  }
+  emend.slrm
+})
