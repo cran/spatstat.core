@@ -1,4 +1,134 @@
 
+        CHANGES IN spatstat.core VERSION 2.3-1
+
+OVERVIEW
+
+    o Covariates in ppm and mppm may be functions that depend on the marks
+    as well as the spatial coordinates.
+
+    o Automatic selection of threshold for defining a binary predictor.
+    
+    o Random perturbation of line segments.
+    
+    o Minor extensions, performance improvements, and bug fixes.
+
+NEW FUNCTIONS
+
+    o thresholdSelect, thresholdCI
+    Select the optimal threshold for converting a numerical predictor
+    to a binary predictor.
+    
+    o coef<-.fii
+    Changes the coefficients of a fitted interaction object
+    (a method for the generic "coef<-")
+
+    o rjitter.psp
+    Random perturbation of a spatial pattern of line segments.
+    A method for 'rjitter' for class 'psp'.
+    
+SIGNIFICANT USER-VISIBLE CHANGES
+
+    o ppm
+    Covariates which are functions may now depend on the marks
+    as well as the spatial coordinates: function(x,y,marks).
+    
+    o mppm
+    Covariates which are functions may now depend on the marks
+    as well as the spatial coordinates: function(x,y,marks).
+    
+    o reach.kppm
+    Now returns a result for LGCP models as well as cluster models.
+
+    o distcdf
+    Improved regularisation algorithm.
+    Argument 'nr=NULL' is now accepted.
+    New argument 'delta' allows the result to be interpolated
+    onto a finer grid.
+
+    o collapse.fv
+    Columns identified by the arguments 'same' and 'different'
+    may now be absent from some of the 'fv' objects that will be collapsed.
+
+    o Kest
+    When the argument 'domain' is given, the calculation of estimates of K(r)
+    has changed slightly, to adhere more closely to the description in
+    the help file.
+    
+    o reload.or.compute
+    Now prints a message indicating whether the data were recomputed
+    or reloaded from file.
+    New argument 'verbose'.
+
+    o update.kppm
+    New argument 'envir'.
+    
+    o clusterfit
+    Minor changes to the argument list.
+
+    o mincontrast
+    Minor changes to the argument list.
+
+    o mincontrast
+    Improved algorithm for handling NA, NaN or infinite values.
+
+    o varcount
+    Argument B has a sensible default.
+
+    o pool.envelope
+    Now uses the value of 'nrank' which was used in the original envelopes.
+    
+    o Kmulti
+    New argument 'rmax'.
+
+    o Kinhom
+    No longer issues a warning about changed behaviour in the case where
+    'lambda' is a fitted model.
+    
+    o pcfinhom
+    No longer issues a warning about changed behaviour in the case where
+    'lambda' is a fitted model.
+    
+BUG FIXES
+
+    o subfits
+    The fitted interaction coefficients were garbled.
+    If 'mfit' is the mppm object and 'a <- subfits(mfit)[[i]]' is one of the
+    sub-models, then coef(a) was correct, but coef(fitin(a)) was incorrect.
+    The fitted interaction was shown correctly by printing 'mfit'
+    but incorrectly by printing 'a'.
+    Fixed.
+    
+    o varcount
+    The result was very inaccurate if the cluster radius was small 
+    compared to the size of the window 'B', due to discretisation error.
+    Fixed.
+
+    o segregation.test
+    The test statistic was calculated as the mean, rather than the sum,
+    of discrepancies between probabilities. (The p-value was not affected.)
+    Fixed.
+
+    o Kest
+    If 'domain' was specified, 'rmax' was ignored.
+    Fixed.
+
+    o edge.Ripley
+    Value was incorrect for a point lying exactly on a corner.
+    Fixed.
+
+    o edge.Ripley
+    Crashed when method="interpreted", if a point lay exactly on a corner.
+    Fixed.
+
+    o plot.fv, plot.envelope
+    Crashed when trying to display a significance band of width zero
+    around a constant function.
+    Fixed.
+    
+    o collapse.fv
+    Crashed if 'length(same) > 1'.
+    Fixed.
+
         CHANGES IN spatstat.core VERSION 2.3-0
 
 OVERVIEW
@@ -264,23 +394,115 @@ OVERVIEW
 
     o We thank Tilman Davies,  Greg McSwiggan and Suman Rakshit
     for contributions.
+
+    o We thank Corey Anderson, Michael Chirico, Andy Craig,
+    Marcelino de la Cruz, Tilman Davies, Pavel Fibich,
+    Kurt Hornik, Gopalan Nair, Yonatan Rosen and Rasmus Waagepetersen
+    for contributions.
     
     o Diffusion kernel smoothing.
     
     o More support for spatial logistic regression models.
 
+    o predict.mppm now works for multitype point process models.
+
+    o Improved handling of 'newdata' in predict.mppm.
+
+    o More support for multi-dimensional patterns.
+    
 NEW FUNCTIONS
 
-    o densityHeat, densityHeat.ppp
-    Given a point pattern, compute the diffusion kernel estimate
-    of point process intensity. This is an alternative to density.ppp.
+    o densityHeat
+    New generic function for diffusion kernel estimation of intensity
+
+    o densityHeat.ppp
+    Diffusion kernel estimation of intensity for point pattern in 2 dimensions.
+    This is an alternative to density.ppp.
+
+    o intersect.boxx
+    Compute intersection of boxes in multi-dimensional space
+
+    o scale.boxx, scale.ppx
+    Methods for 'scale' for boxes and patterns in multi-dimensional space
+
+    o shift.boxx, shift.ppx
+    Methods for 'shift' for boxes and patterns in multi-dimensional space
+
+    o is.boxx
+    Determine whether an object is a multidimensional box
+
+    o mincontrast
+    New argument 'action.bad.values' specifies what action is taken
+    when the summary function produces NA or NaN or infinite values.
+    
+
     
 SIGNIFICANT USER-VISIBLE CHANGES
 
     o slrm
     'step' can now be applied to models fitted using 'slrm'.
 
+    o predict.mppm
+    Now supports multitype point process models.
 
+    o predict.mppm
+    Improved handling of argument 'newdata'
+    
+    o rotmean
+    The result now has the same 'unitname' as the input object X.
+    New argument 'adjust' controls the smoothing bandwidth.
+    
+    o rlabel
+    New argument 'group' specifies that the points are divided into
+    several groups, and that relabelling is applied within each group.
+    
+    o simulate.ppm
+    Now recognises the argument 'window' as an alternative to 'w'.
+
+    o kppm
+    Improved numerical robustness.
+
+    o Kcross, Gcross, Jcross
+    Function labels (shown on the plot legend) have been
+    improved when i = j.
+
+    o anova.mppm
+    Issues a warning when applied to random-effects models
+    (models fitted using the argument 'random').
+
+BUG FIXES
+
+    o Gest
+    If correction="rs" or correction="km", then both the reduced-sample
+    (border correction) and Kaplan-Meier corrected estimates were calculated.
+    [Spotted by Gopalan Nair.]
+    Fixed.
+
+    o rMatClust, rThomas, rCauchy, rVarGamma
+    If the fitted model was effectively a Poisson process,
+    the result did not have attributes 'Lambda' and 'parents'
+    even when the user requested them.
+    Fixed.
+    
+    o model.matrix.mppm
+    Crashed with random-effects models.
+    Fixed.
+
+    o anova.mppm
+    Crashed with random-effects models.
+    Fixed.
+
+    o simulate.rhohat
+    Crashed when applied to rhohat objects computed from data
+    on a linear network.
+    Fixed.
+
+    o objsurf.kppm
+    Crashed if the model was fitted by Palm likelihood (method="palm")
+    or second order composite likelihood (method="clik2").
+    Fixed.
+    
+    
         CHANGES IN spatstat.core VERSION 1.65-11
 
 OVERVIEW

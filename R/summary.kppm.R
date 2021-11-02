@@ -1,7 +1,7 @@
 #'
 #'       summary.kppm.R
 #'
-#'   $Revision: 1.9 $  $Date: 2021/07/05 08:51:36 $
+#'   $Revision: 1.27 $  $Date: 2021/10/27 09:56:30 $
 #' 
 
 summary.kppm <- function(object, ..., quick=FALSE) {
@@ -20,11 +20,14 @@ summary.kppm <- function(object, ..., quick=FALSE) {
                 warning(paste("Unrecognised fitting method",
                               sQuote(Fit$method)))
                 )
-  result$optim.converged <- optimConverged(opt)
-  result$optim.status    <- optimStatus(opt)
+  if(Fit$method != "adapcl") {
+    result$optim.converged <- optimConverged(opt)
+    result$optim.status    <- optimStatus(opt)
+    result$optim.nsteps    <- optimNsteps(opt)
+  }
   ## summarise trend component
   result$trend <- summary(as.ppm(object), ..., quick=quick)
-  if(identical(quick, FALSE)) {
+  if(isFALSE(quick)) {
     theta <- coef(object)
     if(length(theta) > 0) {
       vc <- vcov(object, matrix.action="warn")
@@ -49,9 +52,9 @@ summary.kppm <- function(object, ..., quick=FALSE) {
       }
     }
   }
-  #' clustering measures
+
   #' sibling probability
-  result$psib <- mean(psib(object))
+  if(object$isPCP) result$psib <- mean(psib(object))
   #' overdispersion index
   win <- as.owin(object, from="points")
   vac <- varcount(object, B=win)
@@ -182,16 +185,17 @@ print.summary.kppm <- function(x, ...) {
     parbreak()
     splat("----------- cluster strength indices ---------- ")
     if(!is.null(psi)) {
-      psi <- signif(psi, 4)
+      psi <- signif(psi, digits)
       if(isTRUE(x$stationary)) {
         splat("Sibling probability", psi)
       } else splat("Mean sibling probability", psi)
     }
     if(!is.null(odi))
       splat("Count overdispersion index (on original window):",
-            signif(odi, 3))
+            signif(odi, digits))
   }
   
+
   #'
   invisible(NULL)
 }

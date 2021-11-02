@@ -289,6 +289,8 @@
 	  at any location \code{(x,y)} to obtain the value of the spatial
 	  covariate. It should be a \code{function(x, y)}
 	  or \code{function(x, y, ...)} in the \R language.
+	  For marked point pattern data, the covariate can be a
+	  \code{function(x, y, marks)} or \code{function(x, y, marks, ...)}.
 	  The first two arguments of the function should be the
 	  Cartesian coordinates \eqn{x} and \eqn{y}. The function may have
 	  additional arguments; if the function does not have default
@@ -668,6 +670,29 @@
       undefined, it would be prudent to check that the pixel images
       are correct, and are correctly registered in their spatial relation to
       the observation window.
+    }
+    \item{\dQuote{Some tiles with positive area do not contain any
+	quadrature points: relative error = X\%}}{
+      A problem has arisen when creating the quadrature scheme
+      used to fit the model. In the default rule for computing the
+      quadrature weights, space is divided into rectangular tiles,
+      and the number of quadrature points (data and dummy points) in
+      each tile is counted. It is possible for a tile with non-zero area
+      to contain no quadrature points; in this case, the quadrature
+      scheme will contribute a bias to the model-fitting procedure.
+      \bold{A small relative error (less than 2 percent) is not	important.}
+      Relative errors of a few percent can occur because of the shape of
+      the window.
+      If the relative error is greater than about 5 percent, we
+      recommend trying different parameters for the quadrature scheme,
+      perhaps setting a larger value of \code{nd} to increase the number
+      of dummy points. A relative error greater than 10 percent
+      indicates a major problem with the input data: in this case,
+      extract the quadrature scheme by applying \code{\link{quad.ppm}}
+      to the fitted model, and inspect it. 
+      (The most likely cause of this problem is that the spatial coordinates
+      of the original data were not handled correctly, for example,
+      coordinates of the locations and the window boundary were incompatible.)
     }
     \item{\dQuote{Model is unidentifiable}}{
       It is not possible to estimate all the model parameters

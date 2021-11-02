@@ -50,44 +50,7 @@ mincontrast <- local({
     })
   }
 
-  optionalGridSearch <- function(startpar, fn, objargs, pint, verbose=TRUE) {
-    nhalfgrid <- as.integer(pint$nhalfgrid %orifnull% 0)
-    check.1.integer(nhalfgrid)
-    if(nhalfgrid <= 0) return(startpar)
-    searchratio <- pint$searchratio %orifnull% 2
-    check.1.real(searchratio)
-    stopifnot(searchratio > 1)
-    ra <- searchratio^((1:nhalfgrid)/nhalfgrid)
-    ra <- c(rev(1/ra), 1, ra)
-    nra <- length(ra)
-    if(length(startpar) != 2)
-      stop(paste("startpar has length",
-                 paste0(length(startpar), ";"),
-                 "expecting 2"))
-    values <- matrix(-Inf, nra, nra)
-    stapa <- startpar
-    for(i in seq_along(ra)) {
-      stapa[[1L]] <- startpar[[1L]] * ra[i]
-      for(j in seq_along(ra)) {
-        stapa[[2L]] <- startpar[[1L]] * ra[j]
-        values[i,j] <- as.numeric(do.call(fn, list(par=stapa, objargs=objargs)))
-      }
-    }
-    bestpos <- which.min(values)
-    ibest <- row(values)[bestpos]
-    jbest <- col(values)[bestpos]
-    bestpar <- stapa
-    bestpar[[1L]] <- startpar[[1L]] * ra[ibest]
-    bestpar[[2L]] <- startpar[[2L]] * ra[jbest]
-    if(verbose) {
-      splat("Initial starting parameters:")
-      print(startpar)
-      splat("Modified starting parameters after search:")
-      print(bestpar)
-    }
-    return(bestpar)
-  } 
-  
+
   mincontrast <- function(observed, theoretical, startpar,
                           ...,
                           ctrl=list(q = 1/4, p = 2, rmin=NULL, rmax=NULL),
@@ -95,8 +58,7 @@ mincontrast <- local({
                           explain=list(dataname=NULL,
                                        modelname=NULL, fname=NULL),
                           action.bad.values=c("warn", "stop", "silent"),
-			  adjustment=NULL,
-                          pint=NULL) {
+                          pspace=NULL) {
     verifyclass(observed, "fv")
     action.bad.values <- match.arg(action.bad.values)
     
@@ -152,10 +114,25 @@ mincontrast <- local({
       if(doomed || action.bad.values == "stop")
         stop(whinge, call.=FALSE)
       ## trim each end of domain
-      iMAX <- max(which(ok))
-      iMIN <- min(which(!ok)) + 1
-      if(iMAX > iMIN && all(ok[iMIN:iMAX])) {
-        ## success - accept trimmed domain
+      ra <- range(which(ok))
+      iMIN <- ra[1]
+      iMAX <- ra[2]
+      success <- all(ok[iMIN:iMAX])
+      if(!success) {
+        ## Finite and non-finite values are interspersed;
+        ## find the longest run of finite values
+        z <- rle(ok)
+        k <- which.max(z$lengths * z$values)
+        ## Run must be at least half of the data
+        if(2 * z$lengths[k] > length(ok)) {
+          csl <- cumsum(z$lengths)
+          iMAX <- csl[k]
+          iMIN <- 1L + if(k == 1) 0 else csl[k-1]
+          success <- TRUE
+        }
+      }
+      if(success) {
+        ## accept trimmed domain
         rmin <- rvals[iMIN]
         rmax <- rvals[iMAX]
         obs   <- obs[iMIN:iMAX]
@@ -188,12 +165,11 @@ mincontrast <- local({
     objargs$BIGVALUE <- bigvaluerule(contrast.objective,
                                      objargs,
                                      startpar, ...)
-    ## experimental code to improve starting value
-    startpar <- optionalGridSearch(startpar,
-                                   fn=contrast.objective, objargs=objargs,
-                                   pint=pint)
+    
+
     ## .  .  .  .  O  P  T  I  M  I  Z  E  .  .  .  .
     minimum <- optim(startpar, fn=contrast.objective, objargs=objargs, ...)
+    
     ## if convergence failed, issue a warning 
     signalStatus(optimStatus(minimum), errors.only=TRUE)
     ## evaluate the fitted theoretical curve
@@ -344,6 +320,8 @@ as.fv.minconfit <- function(x) x$fit
 ######  convergence status of 'optim' object
 
 optimConverged <- function(x) { x$convergence == 0 }
+
+optimNsteps <- function(x) { x$counts[["function"]] }
 
 optimStatus <- function(x, call=NULL) {
   cgce <- x$convergence

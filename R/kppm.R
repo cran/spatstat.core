@@ -3,7 +3,7 @@
 #
 # kluster/kox point process models
 #
-# $Revision: 1.174 $ $Date: 2021/07/14 07:33:51 $
+# $Revision: 1.188 $ $Date: 2021/10/28 04:26:26 $
 #
 
 
@@ -175,6 +175,7 @@ kppm.ppp <- kppm.quad <-
     out <- do.call(improve.kppm,
                    append(list(object = out, type = improve.type),
                           improve.args))
+  
 
   attr(out, "h") <- h
   return(out)
@@ -214,6 +215,7 @@ kppmMinCon <- function(X, Xname, po, clusters, control, statistic, statargs,
               StatName  = fitinfo$StatName,
               FitFun    = fitinfo$FitFun,
               statargs  = statargs,
+              pspace    = fitinfo$pspace,
               mcfit     = mcfit,
               maxlogcl  = NULL)
   # results
@@ -251,7 +253,7 @@ clusterfit <- function(X, clusters, lambda = NULL, startpar = NULL,
                        ctrl=list(q=q, p=p, rmin=rmin, rmax=rmax),
                        statistic = NULL, statargs = NULL,
                        algorithm="Nelder-Mead", verbose=FALSE,
-                       pint=NULL){
+                       pspace=NULL){
   if(verbose) splat("Fitting cluster model")
   ## If possible get dataname from dots
   dataname <- list(...)$dataname
@@ -387,7 +389,7 @@ clusterfit <- function(X, clusters, lambda = NULL, startpar = NULL,
                                   margs=dots$margs,
                                   model=dots$model,
                                   funaux=info$funaux,
-                                  pint=pint),
+                                  pspace=pspace),
                              list(...)
                              )
 
@@ -448,7 +450,8 @@ clusterfit <- function(X, clusters, lambda = NULL, startpar = NULL,
                 StatName  = StatName,
                 modelname  = info$modelabbrev,
                 isPCP      = isPCP,
-                lambda     = lambda)
+                lambda     = lambda,
+                pspace     = pspace)
   attr(mcfit, "info") <- extra
   if(verbose) splat("Returning from clusterfit")
   return(mcfit)
@@ -456,7 +459,7 @@ clusterfit <- function(X, clusters, lambda = NULL, startpar = NULL,
 
 
 kppmComLik <- function(X, Xname, po, clusters, control, weightfun, rmax,
-                       algorithm="Nelder-Mead", DPP=NULL, ..., pint=NULL) {
+                       algorithm="Nelder-Mead", DPP=NULL, ..., pspace=NULL) {
   W <- as.owin(X)
   if(is.null(rmax))
     rmax <- rmax.rule("K", W, intensity(X))
@@ -491,7 +494,7 @@ kppmComLik <- function(X, Xname, po, clusters, control, weightfun, rmax,
     lambda <- intensity(X)
 #    lambdaIJ <- lambda^2
     # compute cdf of distance between two uniform random points in W
-    g <- distcdf(W)
+    g <- distcdf(W, delta=rmax/4096)
     # scaling constant is (area * intensity)^2
     gscale <- npoints(X)^2  
   } else {
@@ -502,7 +505,7 @@ kppmComLik <- function(X, Xname, po, clusters, control, weightfun, rmax,
 #    lambdaIJ <- lambdaX[I] * lambdaX[J]
     # compute cdf of distance between two random points in W
     # with density proportional to intensity function
-    g <- distcdf(M, dW=lambdaM)
+    g <- distcdf(M, dW=lambdaM, delta=rmax/4096)
     # scaling constant is (integral of intensity)^2
     gscale <- safevalue(integral.im(lambdaM)^2, default=npoints(X)^2)
   }
@@ -640,7 +643,8 @@ kppmComLik <- function(X, Xname, po, clusters, control, weightfun, rmax,
                 rmax      = rmax,
                 objfun    = obj,
                 objargs   = objargs,
-                maxlogcl  = opt$value)
+                maxlogcl  = opt$value,
+                pspace    = pspace)
     # pack up
     clusters <- update(clusters, as.list(opt$par))
     result <- list(Xname      = Xname,
@@ -676,7 +680,8 @@ kppmComLik <- function(X, Xname, po, clusters, control, weightfun, rmax,
               rmax      = rmax,
               objfun    = obj,
               objargs   = objargs,
-              maxlogcl  = opt$value)
+              maxlogcl  = opt$value,
+              pspace    = pspace)
   # pack up
   result <- list(Xname      = Xname,
                  X          = X,
@@ -700,7 +705,7 @@ kppmComLik <- function(X, Xname, po, clusters, control, weightfun, rmax,
 
 
 kppmPalmLik <- function(X, Xname, po, clusters, control, weightfun, rmax,
-                        algorithm="Nelder-Mead", DPP=NULL, ..., pint=NULL) {
+                        algorithm="Nelder-Mead", DPP=NULL, ..., pspace=NULL) {
   W <- as.owin(X)
   if(is.null(rmax))
     rmax <- rmax.rule("K", W, intensity(X))
@@ -736,7 +741,7 @@ kppmPalmLik <- function(X, Xname, po, clusters, control, weightfun, rmax,
     lambdaJ <- rep(lambda, length(J))
     # compute cdf of distance between a uniform random point in W
     # and a randomly-selected point in X 
-    g <- distcdf(X, M)
+    g <- distcdf(X, M, delta=rmax/4096)
     # scaling constant is (integral of intensity) * (number of points)
     gscale <- npoints(X)^2
   } else {
@@ -746,7 +751,7 @@ kppmPalmLik <- function(X, Xname, po, clusters, control, weightfun, rmax,
     lambdaJ <- lambdaX[J] 
     # compute cdf of distance between a uniform random point in X 
     # and a random point in W with density proportional to intensity function
-    g <- distcdf(X, M, dV=lambdaM)
+    g <- distcdf(X, M, dV=lambdaM, delta=rmax/4096)
     # scaling constant is (integral of intensity) * (number of points)
     gscale <- safevalue(integral.im(lambdaM) * npoints(X),
                         default=npoints(X)^2)
@@ -883,7 +888,8 @@ kppmPalmLik <- function(X, Xname, po, clusters, control, weightfun, rmax,
                 rmax      = rmax,
                 objfun    = obj,
                 objargs   = objargs,
-                maxlogcl  = opt$value)
+                maxlogcl  = opt$value,
+                pspace    = pspace)
     # pack up
     clusters <- update(clusters, as.list(optpar))
     result <- list(Xname      = Xname,
@@ -918,7 +924,8 @@ kppmPalmLik <- function(X, Xname, po, clusters, control, weightfun, rmax,
               rmax      = rmax,
               objfun    = obj,
               objargs   = objargs,
-              maxlogcl  = opt$value)
+              maxlogcl  = opt$value,
+              pspace    = pspace)
   # pack up
   result <- list(Xname      = Xname,
                  X          = X,
@@ -945,7 +952,7 @@ kppmPalmLik <- function(X, Xname, po, clusters, control, weightfun, rmax,
 kppmCLadap <- function(X, Xname, po, clusters, control, weightfun, 
                        rmax=NULL, epsilon=0.01, DPP=NULL,
                        algorithm="Broyden", ..., 
-                       startparm=NULL, globStrat="dbldog") {
+                       startpar=NULL, globStrat="dbldog") {
 
   if(!requireNamespace("nleqslv", quietly=TRUE))
     stop(paste("The package", sQuote("nleqslv"), "is required"),
@@ -954,7 +961,7 @@ kppmCLadap <- function(X, Xname, po, clusters, control, weightfun,
   W <- as.owin(X)
   
   if(is.null(rmax)) # specified for numerical stability
-    rmax <- shortside(W)
+    rmax <- shortside(Frame(W))
 
   # identify pairs of points that might contribute
   cl <- closepairs(X, rmax)
@@ -975,7 +982,7 @@ kppmCLadap <- function(X, Xname, po, clusters, control, weightfun,
     # stationary unmarked Poisson process
     lambda <- intensity(X)
     # compute cdf of distance between two uniform random points in W
-    g <- distcdf(W)
+    g <- distcdf(W, delta=rmax/4096)
     # scaling constant is (area * intensity)^2
     gscale <- npoints(X)^2  
   } else {
@@ -984,7 +991,7 @@ kppmCLadap <- function(X, Xname, po, clusters, control, weightfun,
     lambda <- lambdaM <- predict(po, locations=M)
     # compute cdf of distance between two random points in W
     # with density proportional to intensity function
-    g <- distcdf(M, dW=lambdaM)
+    g <- distcdf(M, dW=lambdaM, delta=rmax/4096)
     # scaling constant is (integral of intensity)^2
     gscale <- safevalue(integral.im(lambdaM)^2, default=npoints(X)^2)
   }
@@ -1018,31 +1025,26 @@ kppmCLadap <- function(X, Xname, po, clusters, control, weightfun,
     pcfunargs <- append(clargs, pcfunargs)
   } else clargs <- NULL
   
-  # determine starting parameter values
-  startpar <- selfstart(X)
-  if(!is.null(startparm)){
-    if(!isDPP){
-      checkpar  <- info$checkpar
-      startpar <- checkpar(startparm, old=TRUE)
-    } else {
-      startpar <- startparm
-    }
+  ## determine starting parameter values
+  if(is.null(startpar)) {
+    startpar <- selfstart(X)
+  } else if(!isDPP){
+    checkpar  <- info$checkpar
+    startpar <- checkpar(startpar, old=TRUE)
   }
-  pcftheo <- pcfun
-  dpcftheo <- dpcfun
-  # optimization later in terms of log of params
-  startpar <- log(startpar)
-  pcfun <- function(par, ...) { pcftheo(exp(par), ...) }
-  dpcfun <- function(par, ...) { dpcftheo(exp(par), ...) }
+  ## optimization will be over the logarithms of the parameters
+  startparLog <- log(startpar)
+  pcfunLog <- function(par, ...) { pcfun(exp(par), ...) }
+  dpcfunLog <- function(par, ...) { dpcfun(exp(par), ...) }
   
   # create local functions to evaluate pair correlation and its gradient
   #  (with additional parameters 'pcfunargs' in its environment)
   paco <- function(d, par) {
-    do.call(pcfun, append(list(par=par, rvals=d), pcfunargs))
+    do.call(pcfunLog, append(list(par=par, rvals=d), pcfunargs))
   }
   
   dpaco <- function(d, par) {
-    do.call(dpcfun, append(list(par=par, rvals=d), pcfunargs))
+    do.call(dpcfunLog, append(list(par=par, rvals=d), pcfunargs))
   }
   
   # trim 'g' to [0, rmax] 
@@ -1093,13 +1095,13 @@ kppmCLadap <- function(X, Xname, po, clusters, control, weightfun,
   }
   
   ## .................   optimize it ..............................
-  opt <- nleqslv::nleqslv(x = startpar, fn = wlogcl2score, 
+  opt <- nleqslv::nleqslv(x = startparLog, fn = wlogcl2score, 
                           method = algorithm,
                           global = globStrat, control = control, 
                           paco=paco, dpaco=dpaco, 
                           dIJ=dIJ, gscale=gscale, epsilon=epsilon)
     
-  ## .......... extract fitted parameters .....................
+  ## .......... extract fitted parameters on original scale ...............
   optpar        <- exp(opt$x)
   names(optpar) <- names(startpar)
   ## insert entries expected in 'opt'
@@ -1574,11 +1576,10 @@ labels.kppm <- labels.dppm <- function(object, ...) {
 }
 
 
-update.kppm <- function(object, ..., evaluate=TRUE) {
+update.kppm <- function(object, ..., evaluate=TRUE, envir=environment(terms(object))) {
   argh <- list(...)
   nama <- names(argh)
   callframe <- object$callframe
-  envir <- environment(terms(object))
   #' look for a formula argument
   fmla <- formula(object)
   jf <- integer(0)

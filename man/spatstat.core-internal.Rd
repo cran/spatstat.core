@@ -202,6 +202,7 @@
 \alias{objsurfEngine}
 \alias{optimConverged}
 \alias{optimStatus}
+\alias{optimNsteps}
 \alias{outdated.interact}
 \alias{oversize.quad}    
 \alias{pairs.listof}
@@ -624,14 +625,14 @@ Kpcf.kppm(model, what)
 killinteraction(model)
 km.rs.opt(o, cc, d, breaks, KM, RS)
 kppmComLik(X, Xname, po, clusters, control, weightfun, rmax,
-           algorithm, DPP, \dots, pint)
+           algorithm, DPP, \dots, pspace)
 kppmMinCon(X, Xname, po, clusters, control, statistic, statargs,
            algorithm, DPP, \dots)
 kppmPalmLik(X, Xname, po, clusters, control, weightfun, rmax, 
-           algorithm, DPP, \dots, pint)
+           algorithm, DPP, \dots, pspace)
 kppmCLadap(X, Xname, po, clusters, control, weightfun, 
            rmax, epsilon, DPP, algorithm, \dots,
-           startparm, globStrat)
+           startpar, globStrat)
 kraever(package, fatal)
 kraeverRandomFields()
 \method{labels}{ppm}(object, \dots)
@@ -689,6 +690,7 @@ objsurfEngine(objfun, optpar, objargs,
               ngrid, ratio, verbose)
 optimConverged(x)
 optimStatus(x, call)
+optimNsteps(x)
 outdated.interact(object)
 oversize.quad(Q, \dots, nU, nX, p)
 PairPotentialType(pairpot)
@@ -938,7 +940,7 @@ validate2Dkernel(kernel, fatal)
 validate.angles(angles, unit, guess)
 validate.weights(x, recip, how, allowzero, allowinf)
 vanilla.fv(x)
-varcountEngine(g, B, lambdaB, f)
+varcountEngine(g, B, lambdaB, f, R, what)
 %vblogit(y, X, offset, eps, m0, S0, S0i, xi0, verb, maxiter, \dots)
 %vblogit.fmla(formula, offset, data, subset, weights, verbose, epsilon, \dots)
 versionstring.interact(object)
