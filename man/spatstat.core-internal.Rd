@@ -180,6 +180,7 @@
 \alias{logi.engine}
 \alias{logLik.vblogit}
 \alias{lookup2DkernelInfo}
+\alias{LurkEngine}
 \alias{makefvlabel}
 \alias{maskLaslett}
 \alias{match2DkernelName}
@@ -334,7 +335,8 @@
 \alias{rpoint.multi}
 \alias{runifpoispp}          
 \alias{runifpoisppOnLines}          
-\alias{safevalue}
+\alias{safeFiniteValue}
+\alias{safePositiveValue}
 \alias{scalardilate.msr}
 \alias{scanmeasure}
 \alias{scanmeasure.ppp}
@@ -624,11 +626,11 @@ Kpcf.kppm(model, what)
 \method{Kmodel}{slrm}(model, \dots)
 killinteraction(model)
 km.rs.opt(o, cc, d, breaks, KM, RS)
-kppmComLik(X, Xname, po, clusters, control, weightfun, rmax,
+kppmComLik(X, Xname, po, clusters, control, stabilize, weightfun, rmax,
            algorithm, DPP, \dots, pspace)
-kppmMinCon(X, Xname, po, clusters, control, statistic, statargs,
+kppmMinCon(X, Xname, po, clusters, control, stabilize, statistic, statargs,
            algorithm, DPP, \dots)
-kppmPalmLik(X, Xname, po, clusters, control, weightfun, rmax, 
+kppmPalmLik(X, Xname, po, clusters, control, stabilize, weightfun, rmax, 
            algorithm, DPP, \dots, pspace)
 kppmCLadap(X, Xname, po, clusters, control, weightfun, 
            rmax, epsilon, DPP, algorithm, \dots,
@@ -652,6 +654,16 @@ logi.engine(Q, trend, interaction, \dots,
             VB)
 \method{logLik}{vblogit}(object, \dots)
 lookup2DkernelInfo(kernel)
+LurkEngine(object, type, cumulative, plot.sd, 
+           quadpoints, wts, Z, subQset, 
+           covvalues, resvalues, 
+           clip, clipwindow, cov.is.im, covrange, 
+           typename, covname,
+           cl, clenv,
+           oldstyle, check,
+           verbose, nx, splineargs,
+           envelope, nsim, nrank, Xsim,
+           internal, checklength)
 makefvlabel(op, accent, fname, sub, argname)
 maskLaslett(X, \dots, eps, dimyx, xy, oldX, verbose, plotit)
 match.kernel(kernel)
@@ -687,7 +699,7 @@ nndcumfun(X, \dots, r)
 no.trend.ppm(x)
 objsurfEngine(objfun, optpar, objargs,
               \dots, dotargs, objname,
-              ngrid, ratio, verbose)
+              ngrid, xlim, ylim, ratio, verbose)
 optimConverged(x)
 optimStatus(x, call)
 optimNsteps(x)
@@ -868,7 +880,8 @@ rocModel(lambda, nullmodel, \dots, high)
 rpoint.multi(n, f, fmax, marks, win, giveup, verbose, warn, nsim, drop)
 runifpoispp(lambda, win, \dots, nsim, drop)
 runifpoisppOnLines(lambda, L, nsim, drop)
-safevalue(x, default)
+safeFiniteValue(x, default)
+safePositiveValue(x, default)
 \method{scalardilate}{msr}(X, f, \dots)
 scanmeasure(X, \dots)
 \method{scanmeasure}{ppp}(X, r, \dots, method) 

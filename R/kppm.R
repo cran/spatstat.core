@@ -3,7 +3,7 @@
 #
 # kluster/kox point process models
 #
-# $Revision: 1.188 $ $Date: 2021/10/28 04:26:26 $
+# $Revision: 1.195 $ $Date: 2021/11/22 00:39:32 $
 #
 
 
@@ -71,6 +71,7 @@ kppm.ppp <- kppm.quad <-
            improve.args = list(),
            weightfun=NULL,
            control=list(),
+           stabilize=TRUE,
            algorithm,
            statistic="K",
            statargs=list(),
@@ -98,6 +99,7 @@ kppm.ppp <- kppm.quad <-
                       improve.args = improve.args,
                       weightfun=weightfun,
                       control=control,
+                      stabilize=stabilize,
                       algorithm=algorithm,
                       statistic=statistic,
                       statargs=statargs,
@@ -146,14 +148,17 @@ kppm.ppp <- kppm.quad <-
   ## fit
   out <- switch(method,
          mincon = kppmMinCon(X=XX, Xname=Xname, po=po, clusters=clusters,
-                             control=control, statistic=statistic,
+                             control=control, stabilize=stabilize,
+                             statistic=statistic,
                              statargs=statargs, rmax=rmax,
                              algorithm=algorithm, ...),
          clik2   = kppmComLik(X=XX, Xname=Xname, po=po, clusters=clusters,
-                             control=control, weightfun=weightfun, 
+                             control=control, stabilize=stabilize,
+                             weightfun=weightfun, 
                              rmax=rmax, algorithm=algorithm, ...),
          palm   = kppmPalmLik(X=XX, Xname=Xname, po=po, clusters=clusters,
-                             control=control, weightfun=weightfun, 
+                             control=control, stabilize=stabilize,
+                             weightfun=weightfun, 
                              rmax=rmax, algorithm=algorithm, ...),
          adapcl   = kppmCLadap(X=XX, Xname=Xname, po=po, clusters=clusters,
                              control=control, epsilon=epsilon, 
@@ -181,7 +186,7 @@ kppm.ppp <- kppm.quad <-
   return(out)
 }
 
-kppmMinCon <- function(X, Xname, po, clusters, control, statistic, statargs,
+kppmMinCon <- function(X, Xname, po, clusters, control=list(), stabilize=TRUE, statistic, statargs,
                        algorithm="Nelder-Mead", DPP=NULL, ...) {
   # Minimum contrast fit
   stationary <- is.stationary(po)
@@ -202,7 +207,7 @@ kppmMinCon <- function(X, Xname, po, clusters, control, statistic, statargs,
     po <- tmp$po
   }
   mcfit <- clusterfit(X, clusters, lambda = lambda,
-                      dataname = Xname, control = control,
+                      dataname = Xname, control = control,  stabilize=stabilize,
                       statistic = statistic, statargs = statargs,
                       algorithm=algorithm, ...)
   fitinfo <- attr(mcfit, "info")
@@ -458,7 +463,7 @@ clusterfit <- function(X, clusters, lambda = NULL, startpar = NULL,
 }
 
 
-kppmComLik <- function(X, Xname, po, clusters, control, weightfun, rmax,
+kppmComLik <- function(X, Xname, po, clusters, control=list(), stabilize=TRUE, weightfun, rmax,
                        algorithm="Nelder-Mead", DPP=NULL, ..., pspace=NULL) {
   W <- as.owin(X)
   if(is.null(rmax))
@@ -471,7 +476,7 @@ kppmComLik <- function(X, Xname, po, clusters, control, weightfun, rmax,
   # compute weights for pairs of points
   if(is.function(weightfun)) {
     wIJ <- weightfun(dIJ)
-    sumweight <- safevalue(sum(wIJ))
+    sumweight <- safePositiveValue(sum(wIJ))
   } else {
     npairs <- length(dIJ)
     wIJ <- rep.int(1, npairs)
@@ -507,7 +512,7 @@ kppmComLik <- function(X, Xname, po, clusters, control, weightfun, rmax,
     # with density proportional to intensity function
     g <- distcdf(M, dW=lambdaM, delta=rmax/4096)
     # scaling constant is (integral of intensity)^2
-    gscale <- safevalue(integral.im(lambdaM)^2, default=npoints(X)^2)
+    gscale <- safePositiveValue(integral.im(lambdaM)^2, default=npoints(X)^2)
   }
 
   # Detect DPP model and change clusters and intensity correspondingly
@@ -562,11 +567,11 @@ kppmComLik <- function(X, Xname, po, clusters, control, weightfun, rmax,
     #       sum(log(lambdaIJ)) - npairs * log(gscale)
     obj <- function(par, objargs) {
       with(objargs, {
-        logprod <- sum(log(safevalue(paco(dIJ, par))))
+        logprod <- sum(log(safePositiveValue(paco(dIJ, par))))
         integ <- unlist(stieltjes(paco, g, par=par))
         integ <- pmax(SMALLVALUE, integ)
         logcl <- 2*(logprod - sumweight * log(integ))
-        logcl <- safevalue(logcl, default=-BIGVALUE)
+        logcl <- safeFiniteValue(logcl, default=-BIGVALUE)
         return(logcl)
       },
       enclos=objargs$envir)
@@ -595,8 +600,8 @@ kppmComLik <- function(X, Xname, po, clusters, control, weightfun, rmax,
       {
         integ <- unlist(stieltjes(wpaco, g, par=par))
         integ <- pmax(SMALLVALUE, integ)
-        logcl <- safevalue(
-          2*(sum(wIJ * log(safevalue(paco(dIJ, par))))
+        logcl <- safeFiniteValue(
+          2*(sum(wIJ * log(safePositiveValue(paco(dIJ, par))))
             - sumweight * log(integ)),
           default=-BIGVALUE)
         return(logcl)
@@ -606,11 +611,30 @@ kppmComLik <- function(X, Xname, po, clusters, control, weightfun, rmax,
     ## determine a suitable large number to replace Inf
     objargs$BIGVALUE <- bigvaluerule(obj, objargs, startpar)
   }
-  #' .........................................................
-  ## arguments for optimization
-  ctrl <- resolve.defaults(list(fnscale=-1), control, list(trace=0))
-  optargs <- list(par=startpar, fn=obj, objargs=objargs, control=ctrl, method=algorithm)
-  ## DPP resolving algorithm and checking startpar
+
+  ## ......................  Optimization settings  ........................
+
+  if(stabilize) {
+    ## Numerical stabilisation 
+    ## evaluate objective at starting state
+    startval <- obj(startpar, objargs)
+    ## use to determine appropriate global scale
+    smallscale <- sqrt(.Machine$double.eps)
+    fnscale <- -max(abs(startval), smallscale)
+    parscale <- pmax(abs(startpar), smallscale)
+    scaling <- list(fnscale=fnscale, parscale=parscale)
+  } else {
+    scaling <- list(fnscale=-1)
+  }
+
+  ## Update list of algorithm control arguments
+  control.updated <- resolve.defaults(control, scaling, list(trace=0))
+
+  ## Initialise list of all arguments to 'optim'
+  optargs <- list(par=startpar, fn=obj, objargs=objargs,
+                  control=control.updated, method=algorithm)
+
+  ## DPP case: check startpar and modify algorithm
   changealgorithm <- length(startpar)==1 && algorithm=="Nelder-Mead"
   if(isDPP){
     alg <- dppmFixAlgorithm(algorithm, changealgorithm, clusters,
@@ -621,6 +645,8 @@ kppmComLik <- function(X, Xname, po, clusters, control, weightfun, rmax,
       optargs$upper <- alg$upper
     }
   }
+  
+  
   ## ..........   optimize it ..............................
   opt <- do.call(optim, optargs)
 
@@ -704,7 +730,7 @@ kppmComLik <- function(X, Xname, po, clusters, control, weightfun, rmax,
 }
 
 
-kppmPalmLik <- function(X, Xname, po, clusters, control, weightfun, rmax,
+kppmPalmLik <- function(X, Xname, po, clusters, control=list(), stabilize=TRUE, weightfun, rmax,
                         algorithm="Nelder-Mead", DPP=NULL, ..., pspace=NULL) {
   W <- as.owin(X)
   if(is.null(rmax))
@@ -753,7 +779,7 @@ kppmPalmLik <- function(X, Xname, po, clusters, control, weightfun, rmax,
     # and a random point in W with density proportional to intensity function
     g <- distcdf(X, M, dV=lambdaM, delta=rmax/4096)
     # scaling constant is (integral of intensity) * (number of points)
-    gscale <- safevalue(integral.im(lambdaM) * npoints(X),
+    gscale <- safePositiveValue(integral.im(lambdaM) * npoints(X),
                         default=npoints(X)^2)
   }
 
@@ -801,7 +827,7 @@ kppmPalmLik <- function(X, Xname, po, clusters, control, weightfun, rmax,
   if(!is.function(weightfun)) {
     # pack up necessary information
     objargs <- list(dIJ=dIJ, g=g, gscale=gscale,
-                    sumloglam=safevalue(sum(log(lambdaJ))),
+                    sumloglam=safeFiniteValue(sum(log(lambdaJ))),
                     envir=environment(paco),
                     BIGVALUE=1, # updated below
                     SMALLVALUE=.Machine$double.eps)
@@ -811,9 +837,10 @@ kppmPalmLik <- function(X, Xname, po, clusters, control, weightfun, rmax,
       with(objargs, {
         integ <- unlist(stieltjes(paco, g, par=par))
         integ <- pmax(SMALLVALUE, integ)
-        logplik <- safevalue(sumloglam + sum(log(safevalue(paco(dIJ, par))))
-                           - gscale * integ,
-                           default=-BIGVALUE)
+        logplik <- safeFiniteValue(
+                sumloglam + sum(log(safePositiveValue(paco(dIJ, par))))
+                - gscale * integ,
+          default=-BIGVALUE)
         return(logplik)
       },
       enclos=objargs$envir)
@@ -831,7 +858,9 @@ kppmPalmLik <- function(X, Xname, po, clusters, control, weightfun, rmax,
     }
     # pack up necessary information
     objargs <- list(dIJ=dIJ, wIJ=wIJ, g=g, gscale=gscale,
-                    wsumloglam=safevalue(sum(wIJ * safevalue(log(lambdaJ)))),
+                    wsumloglam=safeFiniteValue(
+                      sum(wIJ * safeFiniteValue(log(lambdaJ)))
+                    ),
                     envir=environment(wpaco),
                     BIGVALUE=1, # updated below
                     SMALLVALUE=.Machine$double.eps)
@@ -841,8 +870,8 @@ kppmPalmLik <- function(X, Xname, po, clusters, control, weightfun, rmax,
       with(objargs, {
         integ <- unlist(stieltjes(wpaco, g, par=par))
         integ <- pmax(SMALLVALUE, integ)
-        logplik <- safevalue(wsumloglam +
-                             sum(wIJ * log(safevalue(paco(dIJ, par))))
+        logplik <- safeFiniteValue(wsumloglam +
+                             sum(wIJ * log(safePositiveValue(paco(dIJ, par))))
                              - gscale * integ,
                              default=-BIGVALUE)
         return(logplik)
@@ -852,11 +881,30 @@ kppmPalmLik <- function(X, Xname, po, clusters, control, weightfun, rmax,
     ## determine a suitable large number to replace Inf
     objargs$BIGVALUE <- bigvaluerule(obj, objargs, startpar)
   }
-  # arguments for optimization
-  ctrl <- resolve.defaults(list(fnscale=-1), control, list(trace=0))
+
+  ## ......................  Optimization settings  ........................
+
+  if(stabilize) {
+    ## Numerical stabilisation 
+    ## evaluate objective at starting state
+    startval <- obj(startpar, objargs)
+    ## use to determine appropriate global scale
+    smallscale <- sqrt(.Machine$double.eps)
+    fnscale <- -max(abs(startval), smallscale)
+    parscale <- pmax(abs(startpar), smallscale)
+    scaling <- list(fnscale=fnscale, parscale=parscale)
+  } else {
+    scaling <- list(fnscale=-1)
+  }
+
+  ## Update list of algorithm control arguments
+  control.updated <- resolve.defaults(control, scaling, list(trace=0))
+
+  ## Initialise list of all arguments to 'optim'
   optargs <- list(par=startpar, fn=obj, objargs=objargs,
-                  control=ctrl, method=algorithm)
-  ## DPP resolving algorithm and checking startpar
+                  control=control.updated, method=algorithm)
+
+  ## DPP case: check startpar and modify algorithm
   changealgorithm <- length(startpar)==1 && algorithm=="Nelder-Mead"
   if(isDPP){
     alg <- dppmFixAlgorithm(algorithm, changealgorithm, clusters,
@@ -867,6 +915,10 @@ kppmPalmLik <- function(X, Xname, po, clusters, control, weightfun, rmax,
       optargs$upper <- alg$upper
     }
   }
+
+  ## .......................................................................
+  
+
   # optimize it
   opt <- do.call(optim, optargs)
   # raise warning/error if something went wrong
@@ -993,7 +1045,7 @@ kppmCLadap <- function(X, Xname, po, clusters, control, weightfun,
     # with density proportional to intensity function
     g <- distcdf(M, dW=lambdaM, delta=rmax/4096)
     # scaling constant is (integral of intensity)^2
-    gscale <- safevalue(integral.im(lambdaM)^2, default=npoints(X)^2)
+    gscale <- safePositiveValue(integral.im(lambdaM)^2, default=npoints(X)^2)
   }
   
   isDPP <- !is.null(DPP)
@@ -1701,7 +1753,7 @@ unitname.kppm <- unitname.dppm <- function(x) {
 as.fv.kppm <- as.fv.dppm <- function(x) {
   if(x$Fit$method == "mincon")
     return(as.fv(x$Fit$mcfit))
-  gobs <- pcfinhom(x$X, lambda=x, correction="good", update=FALSE)
+  gobs <- if(is.stationary(x)) pcf(x$X, correction="good") else pcfinhom(x$X, lambda=x, correction="good", update=FALSE)
   gfit <- (pcfmodel(x))(gobs$r)
   g <- bind.fv(gobs,
                data.frame(fit=gfit), 
