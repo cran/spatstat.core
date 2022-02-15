@@ -1,5 +1,5 @@
 ## scriptUtils.R
-##       $Revision: 1.6 $ $Date: 2017/11/14 06:42:02 $
+##       $Revision: 1.11 $ $Date: 2022/02/09 00:52:53 $
 
 ## slick way to use precomputed data
 ##    If the named file exists, it is loaded, giving access to the data.
@@ -8,20 +8,22 @@
 
 reload.or.compute <- function(filename, expr, 
                               objects=NULL,
+                              context=parent.frame(),
                               destination=parent.frame(),
                               force=FALSE, verbose=TRUE) {
   stopifnot(is.character(filename) && length(filename) == 1)
   if(force || !file.exists(filename)) {
     if(verbose) splat("Recomputing...")
     ## evaluate 'expr' in a fresh environment
-    ee <- as.expression(substitute(expr))
-    en <- new.env()
-    local(eval(ee), envir=en)
+    .Expr <- ee <- as.expression(substitute(expr))
+    en <- new.env(parent=context)
+    assign(".Expr", ee, pos=en)
+    local(eval(.Expr), envir=en)
     ## default is to save all objects that were created
     if(is.null(objects))
       objects <- ls(envir=en)
     ## save them in the designated file
-    evalq(save(list=objects, file=filename, compress=TRUE), envir=en)
+    save(list=objects, file=filename, compress=TRUE, envir=en)
     ## assign them into the parent frame 
     for(i in seq_along(objects))
       assign(objects[i], get(objects[i], envir=en), envir=destination)

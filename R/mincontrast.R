@@ -1,9 +1,9 @@
-#'
+c#'
 #'  mincontrast.R
 #'
 #'  Functions for estimation by minimum contrast
 #'
-#'  $Revision: 1.115 $ $Date: 2021/11/09 07:32:58 $
+#'  $Revision: 1.119 $ $Date: 2022/01/21 04:07:12 $
 #' 
 
 
@@ -84,6 +84,7 @@ mincontrast <- local({
                           pspace=NULL) {
     verifyclass(observed, "fv")
     action.bad.values <- match.arg(action.bad.values)
+
     
     stopifnot(is.function(theoretical))
     if(!any("par" %in% names(formals(theoretical))))
@@ -242,7 +243,8 @@ mincontrast <- local({
                    startpar = startpar,
                    objfun   = contrast.objective,
                    objargs  = objargs,
-                   dotargs  = list(...))
+                   dotargs  = list(...),
+                   pspace   = pspace)
     class(result) <- c("minconfit", class(result))
     return(result)
   }
@@ -279,13 +281,19 @@ print.minconfit <- function(x, ...) {
             paste(tagvalue, collapse=", "))
     }
   }
-  if(!is.null(fu) && !is.null(da))
-    splat("Fitted by matching theoretical", fu, "function to", da)
-  else {
-    if(!is.null(fu))
+  if(!is.null(fu)) {
+    if(length(fu) > 1) {
+      ## compress names like c("K", "inhom") -> "K[inhom]"
+      fsub <- paste(fu[-1], collapse=",")
+      fu <- paste0(fu[1], paren(fsub, "["))
+    }
+    if(!is.null(da)) {
+      splat("Fitted by matching theoretical", fu, "function to", da)
+    } else {
       splat(" based on", fu)
-    if(!is.null(da))
-      splat(" fitted to", da)
+    }
+  } else if(!is.null(da)) {
+    splat(" fitted to", da)
   }
 
   if(waxlyrical('space', terselevel))
@@ -860,28 +868,6 @@ cauchy.estpcf <- function(X, startpar=c(kappa=1,scale=1),
   return(result)
 }
 
-## user-callable
-resolve.vargamma.shape <- function(..., nu.ker=NULL, nu.pcf=NULL, default = FALSE) {
-  if(is.null(nu.ker) && is.null(nu.pcf)){
-    if(!default)
-        stop("Must specify either nu.ker or nu.pcf", call.=FALSE)
-    nu.ker <- -1/4
-  }
-  if(!is.null(nu.ker) && !is.null(nu.pcf))
-    stop("Only one of nu.ker and nu.pcf should be specified",
-         call.=FALSE)
-  if(!is.null(nu.ker)) {
-    check.1.real(nu.ker)
-    stopifnot(nu.ker > -1/2)
-    nu.pcf <- 2 * nu.ker + 1
-  } else {
-    check.1.real(nu.pcf)
-    stopifnot(nu.pcf > 0)
-    nu.ker <- (nu.pcf - 1)/2
-  }
-  return(list(nu.ker=nu.ker, nu.pcf=nu.pcf))
-}
-
 vargamma.estK <- function(X, startpar=c(kappa=1,scale=1), nu = -1/4,
                           lambda=NULL, q=1/4, p=2, rmin=NULL, rmax=NULL,
                           ...) {
@@ -910,7 +896,8 @@ vargamma.estK <- function(X, startpar=c(kappa=1,scale=1), nu = -1/4,
   ## Catch old nu.ker/nu.pcf syntax and resolve nu-value.
   dots <- list(...)
   if(missing(nu)){
-      nu <- resolve.vargamma.shape(nu.ker=dots$nu.ker, nu.pcf=dots$nu.pcf, default = TRUE)$nu.ker
+    nu <- resolve.vargamma.shape(nu.ker=dots$nu.ker,
+                                 nu.pcf=dots$nu.pcf, default = TRUE)$nu.ker
   }
   check.1.real(nu)
   stopifnot(nu > -1/2)

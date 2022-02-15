@@ -3,7 +3,7 @@
 #
 # kluster/kox point process models
 #
-# $Revision: 1.195 $ $Date: 2021/11/22 00:39:32 $
+# $Revision: 1.201 $ $Date: 2022/02/11 03:05:49 $
 #
 
 
@@ -105,7 +105,7 @@ kppm.ppp <- kppm.quad <-
                       statargs=statargs,
                       rmax = rmax)
   Xenv <- list2env(as.list(covariates), parent=parent.frame())
-  X <- eval(substitute(X), envir=Xenv, enclos=baseenv())
+  X <- eval(substitute(X), envir=Xenv, enclos=parent.frame())
   isquad <- is.quad(X)
   if(!is.ppp(X) && !isquad)
     stop("X should be a point pattern (ppp) or quadrature scheme (quad)")
@@ -128,7 +128,8 @@ kppm.ppp <- kppm.quad <-
             covfunargs=covfunargs, use.gam=use.gam, nd=nd, eps=eps)
   XX <- if(isquad) X$data else X
   
-  ## set default weight function
+           
+  ## default weight function
   if(is.null(weightfun))
     switch(method,
            adapcl = {
@@ -186,8 +187,12 @@ kppm.ppp <- kppm.quad <-
   return(out)
 }
 
+## >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+##                M  i  n  i  m  u  m       C  o  n  t  r  a  s  t
+## <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
 kppmMinCon <- function(X, Xname, po, clusters, control=list(), stabilize=TRUE, statistic, statargs,
-                       algorithm="Nelder-Mead", DPP=NULL, ...) {
+                       algorithm="Nelder-Mead", DPP=NULL, ..., pspace=NULL) {
   # Minimum contrast fit
   stationary <- is.stationary(po)
   # compute intensity
@@ -209,20 +214,21 @@ kppmMinCon <- function(X, Xname, po, clusters, control=list(), stabilize=TRUE, s
   mcfit <- clusterfit(X, clusters, lambda = lambda,
                       dataname = Xname, control = control,  stabilize=stabilize,
                       statistic = statistic, statargs = statargs,
-                      algorithm=algorithm, ...)
+                      algorithm=algorithm, pspace=pspace, ...)
   fitinfo <- attr(mcfit, "info")
   attr(mcfit, "info") <- NULL
   # all info that depends on the fitting method:
-  Fit <- list(method    = "mincon",
-              statistic = statistic,
-              Stat      = fitinfo$Stat,
-              StatFun   = fitinfo$StatFun,
-              StatName  = fitinfo$StatName,
-              FitFun    = fitinfo$FitFun,
-              statargs  = statargs,
-              pspace    = fitinfo$pspace,
-              mcfit     = mcfit,
-              maxlogcl  = NULL)
+  Fit <- list(method       = "mincon",
+              statistic    = statistic,
+              Stat         = fitinfo$Stat,
+              StatFun      = fitinfo$StatFun,
+              StatName     = fitinfo$StatName,
+              FitFun       = fitinfo$FitFun,
+              statargs     = statargs,
+              pspace.given = pspace,
+              pspace.used  = fitinfo$pspace.used, 
+              mcfit        = mcfit,
+              maxlogcl     = NULL)
   # results
   if(!is.null(DPP)){
     clusters <- update(clusters, as.list(mcfit$par))
@@ -394,13 +400,14 @@ clusterfit <- function(X, clusters, lambda = NULL, startpar = NULL,
                                   margs=dots$margs,
                                   model=dots$model,
                                   funaux=info$funaux,
-                                  pspace=pspace),
+                                  pspace=pspace), ## As modified above
                              list(...)
                              )
 
   if(isDPP && algorithm=="Brent" && changealgorithm)
     mcargs <- resolve.defaults(mcargs, list(lower=alg$lower, upper=alg$upper))
 
+  
   ## .............. FIT .......................
   if(verbose) splat("Starting minimum contrast fit")
   mcfit <- do.call(mincontrast, mcargs)
@@ -449,22 +456,26 @@ clusterfit <- function(X, clusters, lambda = NULL, startpar = NULL,
   ## The old fit fun that would have been used (DO WE NEED THIS?)
   FitFun <- paste0(tolower(clusters), ".est", statistic)
 
-  extra <- list(FitFun    = FitFun,
-                Stat      = Stat,
-                StatFun   = StatFun,
-                StatName  = StatName,
-                modelname  = info$modelabbrev,
-                isPCP      = isPCP,
-                lambda     = lambda,
-                pspace     = pspace)
+  extra <- list(FitFun       = FitFun,
+                Stat         = Stat,
+                StatFun      = StatFun,
+                StatName     = StatName,
+                modelname    = info$modelabbrev,
+                isPCP        = isPCP,
+                lambda       = lambda,
+                pspace.used  = pspace) # Modified from call to 'clusterfit'
   attr(mcfit, "info") <- extra
   if(verbose) splat("Returning from clusterfit")
   return(mcfit)
 }
 
+## >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+##                C  o  m  p  o  s  i  t  e    L  i  k  e  l  i  h  o  o  d
+## <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-kppmComLik <- function(X, Xname, po, clusters, control=list(), stabilize=TRUE, weightfun, rmax,
-                       algorithm="Nelder-Mead", DPP=NULL, ..., pspace=NULL) {
+kppmComLik <- function(X, Xname, po, clusters, control=list(), stabilize=TRUE,
+                       weightfun, rmax, algorithm="Nelder-Mead",
+                       DPP=NULL, ..., pspace=NULL) {
   W <- as.owin(X)
   if(is.null(rmax))
     rmax <- rmax.rule("K", W, intensity(X))
@@ -576,7 +587,7 @@ kppmComLik <- function(X, Xname, po, clusters, control=list(), stabilize=TRUE, w
       },
       enclos=objargs$envir)
     }
-    ## determine a suitable large number to replace Inf
+    ## Determine a suitable large number to replace Inf
     objargs$BIGVALUE <- bigvaluerule(obj, objargs, startpar)
   } else {
     # create local function to evaluate  pair correlation(d) * weight(d)
@@ -608,7 +619,7 @@ kppmComLik <- function(X, Xname, po, clusters, control=list(), stabilize=TRUE, w
       },
       enclos=objargs$envir)
     }
-    ## determine a suitable large number to replace Inf
+    ## Determine a suitable large number to replace Inf
     objargs$BIGVALUE <- bigvaluerule(obj, objargs, startpar)
   }
 
@@ -663,14 +674,15 @@ kppmComLik <- function(X, Xname, po, clusters, control=list(), stabilize=TRUE, w
   ## Finish in DPP case
   if(!is.null(DPP)){
     ## all info that depends on the fitting method:
-    Fit <- list(method    = "clik2",
-                clfit     = opt,
-                weightfun = weightfun,
-                rmax      = rmax,
-                objfun    = obj,
-                objargs   = objargs,
-                maxlogcl  = opt$value,
-                pspace    = pspace)
+    Fit <- list(method       = "clik2",
+                clfit        = opt,
+                weightfun    = weightfun,
+                rmax         = rmax,
+                objfun       = obj,
+                objargs      = objargs,
+                maxlogcl     = opt$value,
+                pspace.given = pspace,
+                pspace.used  = pspace)
     # pack up
     clusters <- update(clusters, as.list(opt$par))
     result <- list(Xname      = Xname,
@@ -700,14 +712,15 @@ kppmComLik <- function(X, Xname, po, clusters, control=list(), stabilize=TRUE, w
           eval.im(log(lambda) - sigma2/2)    
   }
   # all info that depends on the fitting method:
-  Fit <- list(method    = "clik2",
-              clfit     = opt,
-              weightfun = weightfun,
-              rmax      = rmax,
-              objfun    = obj,
-              objargs   = objargs,
-              maxlogcl  = opt$value,
-              pspace    = pspace)
+  Fit <- list(method       = "clik2",
+              clfit        = opt,
+              weightfun    = weightfun,
+              rmax         = rmax,
+              objfun       = obj,
+              objargs      = objargs,
+              maxlogcl     = opt$value,
+              pspace.given = pspace,
+              pspace.used  = pspace)
   # pack up
   result <- list(Xname      = Xname,
                  X          = X,
@@ -728,6 +741,11 @@ kppmComLik <- function(X, Xname, po, clusters, control=list(), stabilize=TRUE, w
 
   return(result)
 }
+
+
+## >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+##                P  a  l  m     L  i  k  e  l  i  h  o  o  d              
+## <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
 kppmPalmLik <- function(X, Xname, po, clusters, control=list(), stabilize=TRUE, weightfun, rmax,
@@ -845,7 +863,7 @@ kppmPalmLik <- function(X, Xname, po, clusters, control=list(), stabilize=TRUE, 
       },
       enclos=objargs$envir)
     }
-    ## determine a suitable large number to replace Inf
+    ## Determine a suitable large number to replace Inf
     objargs$BIGVALUE <- bigvaluerule(obj, objargs, startpar)
   } else {
     # create local function to evaluate  pair correlation(d) * weight(d)
@@ -878,7 +896,7 @@ kppmPalmLik <- function(X, Xname, po, clusters, control=list(), stabilize=TRUE, 
       },
       enclos=objargs$envir)
     }
-    ## determine a suitable large number to replace Inf
+    ## Determine a suitable large number to replace Inf
     objargs$BIGVALUE <- bigvaluerule(obj, objargs, startpar)
   }
 
@@ -934,14 +952,15 @@ kppmPalmLik <- function(X, Xname, po, clusters, control=list(), stabilize=TRUE, 
   ## Finish in DPP case
   if(!is.null(DPP)){
     ## all info that depends on the fitting method:
-    Fit <- list(method    = "palm",
-                clfit     = opt,
-                weightfun = weightfun,
-                rmax      = rmax,
-                objfun    = obj,
-                objargs   = objargs,
-                maxlogcl  = opt$value,
-                pspace    = pspace)
+    Fit <- list(method       = "palm",
+                clfit        = opt,
+                weightfun    = weightfun,
+                rmax         = rmax,
+                objfun       = obj,
+                objargs      = objargs,
+                maxlogcl     = opt$value,
+                pspace.given = pspace,
+                pspace.used  = pspace)
     # pack up
     clusters <- update(clusters, as.list(optpar))
     result <- list(Xname      = Xname,
@@ -970,14 +989,15 @@ kppmPalmLik <- function(X, Xname, po, clusters, control=list(), stabilize=TRUE, 
           eval.im(log(lambda) - sigma2/2)    
   }
   # all info that depends on the fitting method:
-  Fit <- list(method    = "palm",
-              clfit     = opt,
-              weightfun = weightfun,
-              rmax      = rmax,
-              objfun    = obj,
-              objargs   = objargs,
-              maxlogcl  = opt$value,
-              pspace    = pspace)
+  Fit <- list(method       = "palm",
+              clfit        = opt,
+              weightfun    = weightfun,
+              rmax         = rmax,
+              objfun       = obj,
+              objargs      = objargs,
+              maxlogcl     = opt$value,
+              pspace.given = pspace,
+              pspace.used  = pspace)
   # pack up
   result <- list(Xname      = Xname,
                  X          = X,
@@ -996,6 +1016,11 @@ kppmPalmLik <- function(X, Xname, po, clusters, control=list(), stabilize=TRUE, 
                  Fit        = Fit)
   return(result)
 }
+
+
+## >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+##       A  d  a  p  t  i  v  e     C  o  m  p  o  s  i  t  e    L  i  k  e  l  i  h  o  o  d
+## <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
 ## ........... contributed by Chiara Fend ...................
@@ -1683,18 +1708,20 @@ update.kppm <- function(object, ..., evaluate=TRUE, envir=environment(terms(obje
   methodname <- as.character(thecall[[1L]])
   switch(methodname,
          kppm.formula = {
-	   # original call has X = [formula with lhs]
+	   ## original call has X = [formula with lhs]
 	   if(!is.null(Xexpr)) {
 	     lhs.of.formula(fmla) <- Xexpr
 	   } else if(is.null(lhs.of.formula(fmla))) {
 	     lhs.of.formula(fmla) <- as.name('.')
 	   }
-           oldformula <- as.formula(getCall(object)$X)
+           oldformula <- getCall(object)$X
+           oldformula <- eval(oldformula, callframe)
            thecall$X <- newformula(oldformula, fmla, callframe, envir)
          },
          {
-	   # original call has X = ppp and trend = [formula without lhs]
-           oldformula <- as.formula(getCall(object)$trend %orifnull% (~1))
+	   ## original call has X = ppp and trend = [formula without lhs]
+           oldformula <- getCall(object)$trend %orifnull% (~1)
+           oldformula <- eval(oldformula, callframe)
 	   fom <-  newformula(oldformula, fmla, callframe, envir)
 	   if(!is.null(Xexpr))
 	      lhs.of.formula(fom) <- Xexpr
@@ -1897,5 +1924,22 @@ psib.kppm <- function(object) {
   g <- pcfmodel(object)
   p <- 1 - 1/g(0)
   return(p)
+}
+
+reach.kppm <- function(x, ..., epsilon) {
+  thresh <- if(missing(epsilon)) NULL else epsilon
+  if(x$isPCP) 
+    return(2 * clusterradius.kppm(x, ..., thresh=thresh))
+  ## use pair correlation
+  g <- pcfmodel(x)
+  ## find upper bound
+  if(is.null(thresh)) thresh <- 0.01
+  f <- function(r) { g(r) - 1 - thresh }
+  scal <- as.list(x$par)$scale %orifnull% 1
+  for(a in scal * 2^(0:10)) { if(f(a) < 0) break; }
+  if(f(a) > 0) return(Inf)
+  ## solve g(r) = 1 + epsilon
+  b <- uniroot(f, c(0, a))$root
+  return(b)
 }
 
