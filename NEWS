@@ -1,4 +1,83 @@
 
+        CHANGES IN spatstat.core VERSION 2.4-2
+
+OVERVIEW
+
+    o Internal bug fixes.
+
+
+        CHANGES IN spatstat.core VERSION 2.4-1
+
+OVERVIEW
+
+    o We thank Frederic Lavancier, Sebastian Meyer, Suman Rakshit and Sven Wagner
+    for contributions.
+    
+    o Improved approximation of intensity of Gibbs models.
+    
+    o Experimental code to represent (theoretical) point process models
+    
+    o Extract more information about a point process model.
+
+    o Internal improvements and bug fixes.
+
+NEW CLASSES
+
+    o zgibbsmodel
+    Experimental. An object of class 'zgibbsmodel' represents a
+    Gibbs point process model with specified parameter values
+    (whereas 'ppm' represents a model fitted to data).
+
+NEW FUNCTIONS
+
+    o hardcoredist
+    Extract the hard core distance of a point process model.
+
+    o interactionorder
+    Extract the order of interpoint interaction of a point process model.
+
+    o zgibbsmodel
+    Experimental. Create an object of class 'zgibbsmodel'.
+
+    o print.zgibbsmodel
+    Experimental. Print an object of class 'zgibbsmodel'.
+    
+    o is.poisson.zgibbsmodel, is.stationary.zgibbsmodel
+    Experimental. Methods for class 'zgibbsmodel'
+
+SIGNIFICANT USER-VISIBLE CHANGES
+
+    o intensity.ppm
+    Can now calculate the Coeurjolly-Lavancier DPP approximation of intensity.
+    [Code kindly contributed by Frederic Lavancier]
+    New argument 'approx' specifies the choice of approximation.
+
+    o relrisk.ppp
+    Ratios which are close to 0/0 are handled more effectively,
+    reducing the likelihood of strange-looking plots when 'sigma' is very small.
+
+BUG FIXES
+
+    o density.ppp
+    Crashed if the observation window had zero area.
+    Fixed.
+
+    o dirichletVoronoi.ppp
+    Crashed randomly, with obscure error messages from 'im' or 'eval.im',
+    when argument 'f' had a small value.
+    [Spotted by Suman Rakshit.]
+    Fixed.
+
+    o dirichletVoronoi.ppp
+    Rarely, produced an image containing NA values.
+    [Spotted by Suman Rakshit.]
+    Fixed.
+
+    o vcov.ppm
+    Crashed in some cases, with message 'object lamdel not found'.
+    [Spotted by Sven Wagner.]
+    Fixed.
+    
         CHANGES IN spatstat.core VERSION 2.4-0
 
 OVERVIEW

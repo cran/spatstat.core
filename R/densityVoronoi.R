@@ -1,7 +1,7 @@
 #'
 #'  densityVoronoi.R
 #'
-#'  $Revision: 1.19 $   $Date: 2022/01/04 05:30:06 $
+#'  $Revision: 1.22 $   $Date: 2022/03/11 03:21:01 $
 #'
 
 densityVoronoi <- function(X, ...) {
@@ -19,7 +19,9 @@ densityVoronoi.ppp <- function(X, f=1, ...,
     stop("f should be a probability between 0 and 1")
   check.1.integer(nrep)
   stopifnot(nrep >= 1)
-  duped <- anyDuplicated(X)
+  dupes <- duplicated(X, rule="deldir")
+  anydupes <- any(dupes)
+  ## WAS: duped <- anyDuplicated(X)
   ##
   ntess <- floor(f * nX)
   if(ntess == 0) {
@@ -32,12 +34,12 @@ densityVoronoi.ppp <- function(X, f=1, ...,
   }
   if(ntess == nX) {
     ## Voronoi/Dirichlet estimate
-    if(!duped) {
+    if(!anydupes) {
       tes <- dirichlet(X)
       tesim <- nnmap(X, what="which", ...)
       num <- 1
     } else {
-      UX <- unique(X)
+      UX <- X[!dupes]
       tes <- dirichlet(UX)
       tesim <- nnmap(UX, what="which", ...)
       idx <- nncross(X, UX, what="which")
@@ -54,8 +56,8 @@ densityVoronoi.ppp <- function(X, f=1, ...,
       cat(paste("Computing", nrep, "intensity estimates..."))
     state <- list()
     for(i in seq_len(nrep)) {
-      estimate <- densityVoronoi(X, f, ...,
-                                 counting=counting, fixed=fixed, nrep=1)
+      estimate <- densityVoronoi.ppp(X, f, ...,
+                                     counting=counting, fixed=fixed, nrep=1)
       total <- eval.im(total + estimate)
       if(verbose) state <- progressreport(i, nrep, state=state)
     }
@@ -63,6 +65,7 @@ densityVoronoi.ppp <- function(X, f=1, ...,
     average <- eval.im(total/nrep)
     return(average)
   }
+  ## ------ This is the main calculation -------
   ## perform thinning
   if(!fixed) {
     itess <- thinjump(nX, f)
@@ -72,7 +75,20 @@ densityVoronoi.ppp <- function(X, f=1, ...,
     tessfrac <- as.numeric(ntess)/nX
   }
   Xtess <- X[itess]
-  if(duped) Xtess <- unique(Xtess)
+  if(anydupes) {
+    dupes2 <- duplicated(Xtess, rule="deldir")
+    if(any(dupes2)) {
+      Xtess <- Xtess[!dupes2]
+      tessfrac <- mean(!dupes2) * tessfrac
+    }
+  }
+  ## handle trivial cases
+  nXT <- npoints(Xtess)
+  if(nXT <= 1) {
+    W <- Window(X)
+    if(nXT == 0) return(as.im(0, W, ...))         # dirichlet(Xtess) undefined
+    if(nXT == 1) return(as.im(1/area(W), W, ...)) # efficiency
+  }
   ## make tessellation
   tes <- dirichlet(Xtess)
   ## estimate intensity in each tile

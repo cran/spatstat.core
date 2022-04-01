@@ -3,7 +3,7 @@
 ## and Fisher information matrix
 ## for ppm objects
 ##
-##  $Revision: 1.134 $  $Date: 2021/02/06 03:43:12 $
+##  $Revision: 1.136 $  $Date: 2022/03/22 06:40:20 $
 ##
 
 vcov.ppm <- local({
@@ -560,6 +560,8 @@ vcalcGibbsGeneral <- function(model,
                                         conform=TRUE, across=1)
           ## momdel[ ,i,j] = h(X[i] | X[-j])
           momdel <- mom.array - ddS
+          ## lamdel[i,j] = lambda(X[i] | X[-j]) is not sparse; avoid computing it
+          lamdel <- NULL
           ## pairweight[i,j] = lambda(X[i] | X[-j] )/lambda( X[i] | X ) - 1
           pairweight <- expm1(tensor1x1(-use.coef, ddS))
         } else {
@@ -915,16 +917,15 @@ vcalcGibbsGeneral <- function(model,
   Sigma <- A1+A2+A3
   
   if(spill) {
-    ## save internal data (with matrices unnormalised) 
+    ## save internal data (with matrices unnormalised)
+    Hessian <- if(reweighting) gradient else if(logi) Slog else A1
     internals <-
       c(internals,
-        list(A1=A1, A2=A2, A3=A3, Sigma=Sigma, areaW=areaW),
-        if(logi)
-           list(A1log=A1log, A2log=A2log, A3log=A3log, Slog=Slog) else NULL,
+        list(A1=A1, A2=A2, A3=A3, Sigma=Sigma, areaW=areaW, fisher=Sigma, hessian = Hessian),
+        if(logi) list(A1log=A1log, A2log=A2log, A3log=A3log, Slog=Slog) else NULL,
         if(reweighting) list(gradient=gradient) else NULL,
-        list(hessian = if(reweighting) gradient else if(logi) Slog else A1,
-             fisher = Sigma),
-        if(saveterms) list(lamdel=lamdel, momdel=momdel) else NULL)
+        if(saveterms) c(list(lamdel=lamdel, momdel=momdel),
+                        if(logi) list(ddSlogi=ddSlogi) else list(ddS=ddS)))
     ## return internal data if no further calculation needed
     if(!spill.vc && !logi)
       return(internals)
