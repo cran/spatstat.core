@@ -78,6 +78,7 @@
 \alias{equalpairs}          
 \alias{evalCovar}
 \alias{evalCovar.ppm}
+\alias{evalCovar.ppp}
 \alias{evalCovar.slrm}
 \alias{evalCovariate}
 \alias{evalInteraction}
@@ -90,7 +91,7 @@
 \alias{extractAIC.slrm}
 \alias{extractAtomicQtests}
 \alias{fakefii}
-\alias{family.glmmPQL} 
+\alias{family.hackglmmPQL} 
 \alias{family.vblogit} 
 \alias{fasp}
 \alias{f3engine}
@@ -104,7 +105,7 @@
 \alias{flipxy.msr}
 \alias{forbid.logi}
 \alias{FormatFaspFormulae}
-\alias{formula.glmmPQL} 
+\alias{formula.hackglmmPQL} 
 \alias{fvexprmap}
 \alias{fvlabels}
 \alias{fvlabels<-}
@@ -338,6 +339,7 @@
 \alias{sp.foundclass}
 \alias{sp.foundclasses}
 \alias{strausscounts}
+\alias{stripGLMM}
 \alias{suffloc}
 \alias{suffstat.generic}
 \alias{suffstat.poisson}
@@ -411,7 +413,7 @@ calc.SIR(COV, z)
 calc.TSE(COV, z, pos, Dim1, Dim2)
 cannot.update(\dots)
 censtimeCDFest(o, cc, d, breaks, \dots,
-     KM, RS, HAN, RAW, han.denom, tt, pmax)
+     KM, RS, HAN, RAW, han.denom, tt, pmax, fname, fexpr)
 check.separable(dmat, covname, isconstant, fatal)
 check.testfun(f, f1, X)
 circticks(R, at, unit, start, clockwise, labels)
@@ -495,7 +497,10 @@ equalpairs(U, X, marked=FALSE)
 evalCovar(model, covariate, \dots)
 \method{evalCovar}{ppm}(model, covariate, \dots, lambdatype,
           dimyx, eps, interpolate, jitter, jitterfactor,
-          modelname, covname, dataname, subset) 
+          modelname, covname, dataname, subset, clip.predict) 
+\method{evalCovar}{ppp}(model, covariate, \dots, lambdatype,
+          dimyx, eps, interpolate, jitter, jitterfactor,
+          modelname, covname, dataname, subset, clip.predict) 
 \method{evalCovar}{slrm}(model, covariate, \dots, lambdatype,
           jitter, jitterfactor,
           modelname, covname, dataname, subset) 
@@ -512,7 +517,7 @@ expandDot(f, dotvars)
 \method{extractAIC}{slrm}(fit, scale = 0, k = 2, \dots)
 extractAtomicQtests(x)
 fakefii(model)
-\method{family}{glmmPQL}(object, \dots)
+\method{family}{hackglmmPQL}(object, \dots)
 \method{family}{vblogit}(object, \dots)
 fasp(fns, which, formulae, dataname, title, rowNames, colNames, checkfv)
 f3engine(x, y, z, box, vside, range, nval, correction)
@@ -526,7 +531,7 @@ flatfname(x)
 \method{flipxy}{msr}(X)
 forbid.logi(object)
 FormatFaspFormulae(f, argname)
-\method{formula}{glmmPQL}(x, \dots)
+\method{formula}{hackglmmPQL}(x, \dots)
 fvexprmap(x)
 fvlabels(x, expand=FALSE)
 fvlabels(x) <- value
@@ -851,6 +856,7 @@ splitHybridInteraction(coeffs, inte)
 sp.foundclass(cname, inlist, formalname, argsgiven)             
 sp.foundclasses(cnames, inlist, formalname, argsgiven)
 strausscounts(U,X,r,EqualPairs)
+stripGLMM(object)
 suffloc(object)
 suffstat.generic(model, X, callstring)
 suffstat.poisson(model, X, callstring)

@@ -4,7 +4,7 @@
 ##
 ##    class "fv" of function value objects
 ##
-##    $Revision: 1.172 $   $Date: 2021/12/07 01:15:51 $
+##    $Revision: 1.175 $   $Date: 2022/05/17 07:42:06 $
 ##
 ##
 ##    An "fv" object represents one or more related functions
@@ -365,14 +365,18 @@ fvlabels <- function(x, expand=FALSE) {
   lab <- attr(x, "labl")
   if(expand && !is.null(fname <- attr(x, "fname"))) {
     ## expand plot labels using function name
-    nstrings <- max(substringcount("%s", lab))
-    ## pad with blanks
-    nextra <- nstrings - length(fname)
-    if(nextra > 0) 
-      fname <- c(fname, rep("", nextra))
-    ## render
-    if(nstrings > 0)
-      lab <- do.call(sprintf, append(list(lab), as.list(fname)))
+    nwanted <- substringcount("%s", lab)
+    ngiven <- length(fname)
+    if(any(0 < nwanted & nwanted < ngiven))
+      warning("Internal error: fvlabels truncated the function name", call.=FALSE)
+    nlacking <- max(nwanted) - ngiven
+    if(nlacking > 0) {
+      ## pad with blanks
+      fname <- c(fname, rep("", nlacking))
+    }
+    fnamelist <- as.list(fname)
+    for(i in which(nwanted > 0)) 
+      lab[i] <- do.call(sprintf, append(list(lab[i]), fnamelist[1:nwanted[i]]))
   }
   ## remove empty space
   lab <- gsub(" ", "", lab)
@@ -383,7 +387,7 @@ fvlabels <- function(x, expand=FALSE) {
 "fvlabels<-" <- function(x, value) {
   stopifnot(is.fv(x))
   stopifnot(is.character(value))
-  stopifnot(length(value) == length(fvlabels(x)))
+  stopifnot(length(value) == ncol(x))
   attr(x, "labl") <- value
   return(x)
 }
@@ -1454,15 +1458,18 @@ ratfv <- function(df, numer, denom, ..., ratio=TRUE) {
   ## make denominator an fv object
   if(is.data.frame(denom)) {
     den <- fv(denom, ...)
-  } else {
-    ## scalar
-    check.1.real(denom, "Unless it is a data frame,")
+  } else if(is.numeric(denom)) {
+    ## numeric scalar or vector
+    nd <- length(denom)
+    if(nd != 1 && nd != (ny <- nrow(y)))
+      stop(paste("Length of 'denom'", paren(paste0("=", nd)),
+                 "is not equal to length of numerator", paren(paste0("=", ny))))
     ## replicate it in all the data columns
     dendf <- as.data.frame(num)
     valuecols <- (names(num) != fvnames(num, ".x"))
     dendf[, valuecols] <- denom
     den <- fv(dendf, ...)
-  } 
+  } else stop("'denom' should be a data frame, a numeric constant, or a numeric vector")
   ## tweak the descriptions
   ok <- (names(y) != fvnames(y, ".x"))
   attr(num, "desc")[ok] <- paste("numerator of",   attr(num, "desc")[ok])

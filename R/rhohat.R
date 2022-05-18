@@ -1,7 +1,7 @@
 #'
 #'  rhohat.R
 #'
-#'  $Revision: 1.98 $  $Date: 2021/06/28 03:45:18 $
+#'  $Revision: 1.103 $  $Date: 2022/05/12 04:08:19 $
 #'
 #'  Non-parametric estimation of a transformation rho(z) determining
 #'  the intensity function lambda(u) of a point process in terms of a
@@ -30,20 +30,26 @@ rhohat.ppp <- rhohat.quad <-
   callstring <- short.deparse(sys.call())
   smoother <- match.arg(smoother)
   method <- match.arg(method)
+  X <- if(is.ppp(object)) object else object$data
   if(missing(positiveCI))
     positiveCI <- (smoother == "local")
   if(missing(covname)) 
     covname <- sensiblevarname(short.deparse(substitute(covariate)), "X")
   if(is.null(adjust))
     adjust <- 1
-  # validate model
+  ## Determine reference model (and validate arguments)
   if(is.null(baseline)) {
-    model <- ppm(object ~1)
+    ## Uniform intensity
+    ## WAS: model <- ppm(object ~1, subset=subset)
+    model <- X
     reference <- "Lebesgue"
   } else {
-    model <- ppm(object ~ offset(log(baseline)))
+    ## Intensity proportional to baseline
+    model <- eval(substitute(
+      ppm(object ~ offset(log(baseline)), subset=SUBSET),
+      list(SUBSET=subset)))
     reference <- "baseline"
-  } 
+  }
   modelcall <- NULL
 
   if(is.character(covariate) && length(covariate) == 1) {
@@ -57,12 +63,12 @@ rhohat.ppp <- rhohat.quad <-
            },
            stop("Unrecognised covariate name")
          )
-    covunits <- unitname(data.ppm(model))
+    covunits <- unitname(X)
   } else {
     covunits <- NULL
   }
 
-  W <- Window(data.ppm(model))
+  W <- Window(X)
   if(!is.null(subset)) W <- W[subset, drop=FALSE]
   areaW <- area(W)
   
@@ -73,6 +79,7 @@ rhohat.ppp <- rhohat.quad <-
                horvitz=horvitz,
                smoother=smoother,
                resolution=list(dimyx=dimyx, eps=eps),
+               evalCovarArgs=list(clip.predict=FALSE),
                n=n, bw=bw, adjust=adjust, from=from, to=to,
                bwref=bwref, covname=covname, covunits=covunits,
                confidence=confidence,
@@ -137,6 +144,7 @@ rhohat.ppm <- function(object, covariate, ...,
                horvitz=horvitz,
                smoother=smoother,
                resolution=list(dimyx=dimyx, eps=eps),
+               evalCovarArgs=list(clip.predict=FALSE),
                n=n, bw=bw, adjust=adjust, from=from, to=to,
                bwref=bwref, covname=covname, covunits=covunits,
                confidence=confidence, positiveCI=positiveCI,
@@ -162,7 +170,7 @@ rhohatEngine <- function(model, covariate,
                          breaks=NULL,
                          modelcall=NULL, callstring="rhohat") {
   reference <- match.arg(reference)
-  # evaluate the covariate at data points and at pixels
+  #' evaluate the covariate at data points and at pixels
   stuff <- do.call(evalCovar,
                    c(list(model=model,
                           covariate=covariate,
@@ -182,13 +190,13 @@ rhohatEngine <- function(model, covariate,
   lambda  <- values$lambda
     ## weights
   if(!is.null(weights)) {
-    X <- data.ppm(model)
+    X <- as.ppp(stuff$X)
     if(is.im(weights)) 
       weights <- safelookup(weights, X)
     else if(is.function(weights))
       weights <- weights(X$x, X$y)
     else if(is.numeric(weights) && is.vector(as.numeric(weights))) 
-      check.nvector(weights, npoints(X))
+      check.nvector(weights, npoints(X), vname="weights")
     else stop(paste(sQuote("weights"),
                     "should be a vector, a pixel image, or a function"))
   }

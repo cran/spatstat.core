@@ -1,4 +1,55 @@
 
+        CHANGES IN spatstat.core VERSION 2.4-4
+
+OVERVIEW
+
+    o Bug fixes and minor improvements.
+
+BUG FIXES
+
+    o rhohat.ppp
+    The argument 'subset' was not handled correctly in the internal data.
+    The estimated function 'rho' was correct, but if 'predict.rhohat' was applied,
+    predictions were computed only in the 'subset', and were possibly incorrect values.
+    Fixed.
+
+    o Gfox, Jfox
+    Warnings were issued about text formatting errors (mentioning 'sprintf' or 'fmt').
+    Fixed.
+    
+        CHANGES IN spatstat.core VERSION 2.4-3
+
+OVERVIEW
+
+    o We thank Art Stock for contributions.
+    
+    o Bug fixes and minor improvements.
+
+BUG FIXES
+
+    o Smooth.ppp
+    Crashed when 'kernel' was a function, 'at="points"' and 'scalekernel=FALSE'.
+    Fixed.
+
+    o Finhom, Ginhom, Jinhom
+    Crashed when ratio=TRUE.
+    [Spotted by Art Stock.]
+    Fixed.
+    
+    o envelope
+    Crashed for some of the summary functions when ratio=TRUE.
+    [Spotted by Art Stock.]
+    Fixed.
+
+    o "[.rat"
+    Crashed in some cases.
+    Fixed.
+
+    o Kcross
+    The result of Kcross() was 'invisible',
+    i.e. it was not automatically printed.
+    Fixed.
+    
         CHANGES IN spatstat.core VERSION 2.4-2
 
 OVERVIEW

@@ -6,7 +6,7 @@
 #'
 #'   GNU Public Licence >= 2
 #'
-#'   $Revision: 1.1 $ $Date: 2021/10/01 04:03:52 $
+#'   $Revision: 1.3 $ $Date: 2022/05/09 01:45:28 $
 #'
 #' 
 #' threshold selection
@@ -18,8 +18,7 @@ thresholdSelect <- function(X, Z, method=c("Y", "LL", "AR", "t", "C"), Zname) {
   if(!is.ppp(X)) stop("X should be a point pattern (class ppp)")
   if(missing(Zname)) Zname <- short.deparse(substitute(Z))
   method <- match.arg(method)
-  fit <- ppm(X)
-  a <- evalCovar(fit, Z, jitter=FALSE)$values
+  a <- evalCovar(X, Z, jitter=FALSE)$values
   FF <- ecdf(a$ZX)
   GG <- ecdf(a$Zvalues)
   n <- npoints(X)
@@ -55,7 +54,7 @@ thresholdCI <- local({
   thresholdCI <- function(X, Z, confidence=0.95, nsim=1000, parametric=FALSE) {
     #' bootstrap confidence interval for Youden estimate only.
     if(!is.ppp(X)) stop("X should be a point pattern (class ppp)")
-    a <- evalCovar(ppm(X), Z, jitter=FALSE)$values
+    a <- evalCovar(X, Z, jitter=FALSE)$values
     FF <- ecdf(a$ZX)
     GG <- ecdf(a$Zvalues)
     est <- Youden(FF,GG)
@@ -98,6 +97,8 @@ thresholdCI <- local({
   }
 
   simthresh <- function(F, G, ndata, nsim=100, parametric) {
+    check.1.integer(nsim)
+    stopifnot(nsim > 1)
     if(parametric) F <- Fpredicted(F, G)
     Finv <- inversefunction(F)
     zout <- sout <- numeric(nsim)
